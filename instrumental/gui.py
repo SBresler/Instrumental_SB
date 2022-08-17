@@ -4,22 +4,31 @@ import numpy as np
 import scipy.misc
 from qtpy.QtCore import Qt, QTimer, Signal, QRect, QRectF, QPoint
 from qtpy.QtGui import QPixmap, QImage, QColor, QPen, QMouseEvent, QPainter
-from qtpy.QtWidgets import (QGraphicsView, QGraphicsScene, QMainWindow, QLabel, QStyle,
-                            QDoubleSpinBox)
+from qtpy.QtWidgets import (
+    QGraphicsView,
+    QGraphicsScene,
+    QMainWindow,
+    QLabel,
+    QStyle,
+    QDoubleSpinBox,
+)
 from qtpy import PYSIDE, PYQT5
 from . import u, Q_
 
 mpl, FigureCanvas, Figure = None, None, None
+
+
 def load_matplotlib():
     global mpl, FigureCanvas, Figure
     import matplotlib as mpl
+
     if PYQT5:
-        mpl.use('Qt5Agg')
+        mpl.use("Qt5Agg")
     else:
-        mpl.use('Qt4Agg')
+        mpl.use("Qt4Agg")
 
     if PYSIDE:
-        mpl.rcParams['backend.qt4'] = 'PySide'
+        mpl.rcParams["backend.qt4"] = "PySide"
 
     if PYQT5:
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -31,6 +40,7 @@ def load_matplotlib():
 
 class MPLFigure(object):
     """Convenience class for adding MPL figures to PySide/PyQt4 GUIs"""
+
     def __init__(self):
         if mpl is None:
             load_matplotlib()
@@ -38,7 +48,7 @@ class MPLFigure(object):
         self.canvas = FigureCanvas(self.fig)
 
 
-def create_figure_window(title=''):
+def create_figure_window(title=""):
     """Creates a figure in a Qt window. Returns the tuple (window, mplfigure)"""
     win = QMainWindow()
     mplfig = MPLFigure()
@@ -101,22 +111,22 @@ class CameraView(QLabel):
                 self.setMinimumSize(pixmap_size)
 
     def _wait_for_frame(self):
-        frame_ready = self.camera.wait_for_frame(timeout='0 ms')
+        frame_ready = self.camera.wait_for_frame(timeout="0 ms")
         if frame_ready:
             arr = self.camera.latest_frame(copy=False)
             self._set_pixmap_from_array(arr)
 
     def set_height(self, h):
-        """ Sets the height while keeping the image aspect ratio fixed """
+        """Sets the height while keeping the image aspect ratio fixed"""
         self.setScaledContents(True)
         cam = self.camera
-        self.setFixedSize(cam.width*h/cam.height, h)
+        self.setFixedSize(cam.width * h / cam.height, h)
 
     def set_width(self, w):
-        """ Sets the width while keeping the image aspect ratio fixed """
+        """Sets the width while keeping the image aspect ratio fixed"""
         self.setScaledContents(True)
         cam = self.camera
-        self.setFixedSize(w, cam.height*w/cam.width)
+        self.setFixedSize(w, cam.height * w / cam.width)
 
 
 class CroppableCameraView(QGraphicsView):
@@ -142,7 +152,7 @@ class CroppableCameraView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scene = QGraphicsScene()
-        #self.setFrameStyle(QFrame.NoFrame)
+        # self.setFrameStyle(QFrame.NoFrame)
         self.setScene(self.scene)
         self.pixmapitem = self.scene.addPixmap(QPixmap())
         self._uncropped_pixmap = None
@@ -190,11 +200,11 @@ class CroppableCameraView(QGraphicsView):
             sr = self.pixmapitem.sceneTransform().mapRect(ir)
 
             size = self.pixmapitem.pixmap().size()
-            x2 = max(sr.left(), min(sr.right()-1, sp.x()))
-            y2 = max(sr.top(), min(sr.bottom()-1, sp.y()))
+            x2 = max(sr.left(), min(sr.right() - 1, sp.x()))
+            y2 = max(sr.top(), min(sr.bottom() - 1, sp.y()))
             x1, x2 = sorted((x1, x2))
             y1, y2 = sorted((y1, y2))
-            self.selrect.setRect(x1, y1, x2-x1, y2-y1)
+            self.selrect.setRect(x1, y1, x2 - x1, y2 - y1)
 
         self.mouseMoved.emit(event)
 
@@ -225,9 +235,11 @@ class CroppableCameraView(QGraphicsView):
     def rect(self):
         """QRect of the selection in camera coordinates"""
         # selrect in _image_ (pixmap) coordinates
-        i_selrect = self.pixmapitem.sceneTransform().inverted()[0].mapRect(self.selrect.rect())
-        current_left = self.settings.get('left', 0)
-        current_top = self.settings.get('top', 0)
+        i_selrect = (
+            self.pixmapitem.sceneTransform().inverted()[0].mapRect(self.selrect.rect())
+        )
+        current_left = self.settings.get("left", 0)
+        current_top = self.settings.get("top", 0)
         return i_selrect.toRect().translated(current_left, current_top)
 
     def crop_to_rect(self):
@@ -238,10 +250,10 @@ class CroppableCameraView(QGraphicsView):
         self.hideRect()
 
         rect = self.rect()
-        self.settings['left'] = rect.left()
-        self.settings['right'] = rect.right()
-        self.settings['top'] = rect.top()
-        self.settings['bot'] = rect.bottom()
+        self.settings["left"] = rect.left()
+        self.settings["right"] = rect.right()
+        self.settings["top"] = rect.top()
+        self.settings["bot"] = rect.bottom()
 
         if was_live:
             self.start_video()
@@ -256,7 +268,7 @@ class CroppableCameraView(QGraphicsView):
         if was_live:
             self.stop_video()
 
-        for key in ['left', 'right', 'top', 'bot']:
+        for key in ["left", "right", "top", "bot"]:
             if key in self.settings:
                 del self.settings[key]
 
@@ -273,7 +285,11 @@ class CroppableCameraView(QGraphicsView):
 
     def mapSceneToPixmap(self, pt):
         transform = self.pixmapitem.sceneTransform().inverted()[0]
-        return transform.mapRect(pt) if isinstance(pt, (QRect, QRectF)) else transform.map(pt)
+        return (
+            transform.mapRect(pt)
+            if isinstance(pt, (QRect, QRectF))
+            else transform.map(pt)
+        )
 
     def mapViewToPixmap(self, view_pt):
         scene_pt = self.mapToScene(view_pt)
@@ -281,13 +297,19 @@ class CroppableCameraView(QGraphicsView):
 
     def mapPixmapToScene(self, pixmap_pt):
         transform = self.pixmapitem.sceneTransform()
-        map_func = transform.mapRect if isinstance(pixmap_pt, (QRect, QRectF)) else transform.map
+        map_func = (
+            transform.mapRect
+            if isinstance(pixmap_pt, (QRect, QRectF))
+            else transform.map
+        )
         return map_func(pixmap_pt)
 
     def mapSceneToCamera(self, sc_pt):
         px_pt = self.mapSceneToPixmap(sc_pt)
-        return QPoint(px_pt.x() + self.settings.get('left', 0),
-                      px_pt.y() + self.settings.get('top', 0))
+        return QPoint(
+            px_pt.x() + self.settings.get("left", 0),
+            px_pt.y() + self.settings.get("top", 0),
+        )
 
     def set_image(self, image_arr):
         pixmap = QPixmap(self._array_to_qimage(image_arr))
@@ -304,11 +326,11 @@ class CroppableCameraView(QGraphicsView):
         ir = self.pixmapitem.boundingRect()
         sr = self.pixmapitem.sceneTransform().mapRect(ir)
         self.scene.setSceneRect(sr)
-        #self.setFixedSize(sr.width(), sr.height())
+        # self.setFixedSize(sr.width(), sr.height())
         self.resize(sr.width(), sr.height())
-        #self.viewport().setMaximumSize(sr.width(), sr.height())
+        # self.viewport().setMaximumSize(sr.width(), sr.height())
         d = self.style().pixelMetric(QStyle.PM_DefaultFrameWidth)
-        self.setMaximumSize(sr.width() + 2*d, sr.height() + 2*d)
+        self.setMaximumSize(sr.width() + 2 * d, sr.height() + 2 * d)
 
     def grab_image(self):
         arr = self.cam.grab_image(**self.settings)
@@ -332,7 +354,7 @@ class CroppableCameraView(QGraphicsView):
         self.is_live = False
 
     def _wait_for_frame(self):
-        frame_ready = self.cam.wait_for_frame(timeout='0 ms')
+        frame_ready = self.cam.wait_for_frame(timeout="0 ms")
         if frame_ready:
             arr = self.cam.latest_frame(copy=True)
             self.set_image(arr)
@@ -354,7 +376,7 @@ class CroppableCameraView(QGraphicsView):
     def _create_lut(self, k):
         A = 2**15
         B = 100  # k's scaling factor
-        g = lambda i, k: A*((k-B)*i) / ((2*k)*x - (k+B)*A)
+        g = lambda i, k: A * ((k - B) * i) / ((2 * k) * x - (k + B) * A)
 
     def _array_to_qimage(self, arr):
         bpl = arr.strides[0]
@@ -382,12 +404,13 @@ class CroppableCameraView(QGraphicsView):
 
 class UDoubleSpinBox(QDoubleSpinBox):
     """A unitful QDoubleSpinBox"""
+
     uValueChanged = Signal(Q_)
 
     def __init__(self, parent=None, units=None):
         QDoubleSpinBox.__init__(self, parent)
         if units is not None:
-            self.setSuffix(' ' + str(units))
+            self.setSuffix(" " + str(units))
         self._units = u(self.suffix().strip()).units
         self.valueChanged.connect(self._emit_uValueChanged)
 
@@ -420,5 +443,5 @@ class UDoubleSpinBox(QDoubleSpinBox):
 
     def format(self, value):
         """Format a value as the spinbox does"""
-        spec = '.{}f'.format(self.decimals())
+        spec = ".{}f".format(self.decimals())
         return format(value.magnitude, spec) + self.suffix()

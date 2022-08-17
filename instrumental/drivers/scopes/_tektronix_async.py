@@ -19,10 +19,11 @@ def patch_class(cls):
 def method_of(clsname):
     def wrap(func):
         method_registry[clsname].append(func)
+
     return wrap
 
 
-@method_of('TekScope')
+@method_of("TekScope")
 def async_get_data(self, channel=1, width=2):
     """Retrieve a trace from the scope asynchronously.
 
@@ -47,7 +48,7 @@ def async_get_data(self, channel=1, width=2):
         ``y`` is in volts.
     """
     if width not in (1, 2):
-        raise ValueError('width must be 1 or 2')
+        raise ValueError("width must be 1 or 2")
 
     with self.transaction():
         self.write("data:source ch{}".format(channel))
@@ -61,26 +62,29 @@ def async_get_data(self, channel=1, width=2):
         self.write("data:start 1")
         self.write("data:stop {}".format(stop))
 
-    #self.resource.flow_control = 1  # Soft flagging (XON/XOFF flow control)
+    # self.resource.flow_control = 1  # Soft flagging (XON/XOFF flow control)
     raw_data_y = yield from self._async_read_curve(width=width)
-    raw_data_x = np.arange(1, len(raw_data_y)+1)
+    raw_data_x = np.arange(1, len(raw_data_y) + 1)
 
     # Get scale and offset factors
     wp = yield from self._async_waveform_params()
-    x_units = self._tek_units(wp['xun'])
-    y_units = self._tek_units(wp['yun'])
+    x_units = self._tek_units(wp["xun"])
+    y_units = self._tek_units(wp["yun"])
 
-    data_x = Q_((raw_data_x - wp['pt_o'])*wp['xin'] + wp['xze'], x_units)
-    data_y = Q_((raw_data_y - wp['yof'])*wp['ymu'] + wp['yze'], y_units)
+    data_x = Q_((raw_data_x - wp["pt_o"]) * wp["xin"] + wp["xze"], x_units)
+    data_y = Q_((raw_data_y - wp["yof"]) * wp["ymu"] + wp["yze"], y_units)
 
     return data_x, data_y
 
 
-@method_of('TekScope')
+@method_of("TekScope")
 def _async_read_curve(self, width):
-    with self.resource.ignore_warning(visa.constants.VI_SUCCESS_MAX_CNT),\
-        visa_context(self.resource, timeout=10000, read_termination=None,
-                     end_input=visa.constants.SerialTermination.none):
+    with self.resource.ignore_warning(visa.constants.VI_SUCCESS_MAX_CNT), visa_context(
+        self.resource,
+        timeout=10000,
+        read_termination=None,
+        end_input=visa.constants.SerialTermination.none,
+    ):
 
         self.write("curve?")
         async_read_chunk = self.resource._async_read_chunk
@@ -92,19 +96,19 @@ def _async_read_curve(self, width):
         cursor = 0
 
         while cursor < num_bytes:
-            raw_bin, _ = yield from async_read_chunk(num_bytes-cursor)
-            buf[cursor:cursor+len(raw_bin)] = raw_bin
+            raw_bin, _ = yield from async_read_chunk(num_bytes - cursor)
+            buf[cursor : cursor + len(raw_bin)] = raw_bin
             cursor += len(raw_bin)
 
     yield from self.resource._async_read_raw()  # Eat termination
 
     num_points = int(num_bytes // width)
-    dtype = '>i{:d}'.format(width)
+    dtype = ">i{:d}".format(width)
     return np.frombuffer(buf, dtype=dtype, count=num_points)
 
 
-@method_of('TekScope')
+@method_of("TekScope")
 def _async_waveform_params(self):
-    self.write('wfmoutpre?')
+    self.write("wfmoutpre?")
     msg = yield from self.resource.async_read()
-    return self._unpack_wfm_params(msg.split(';'))
+    return self._unpack_wfm_params(msg.split(";"))

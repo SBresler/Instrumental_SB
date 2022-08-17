@@ -6,8 +6,14 @@ from ... import Facet
 from ...util import check_units
 from .. import Motion
 from .isc_midlib import NiceISC
-from .common import (KinesisError, MessageType, GenericDevice, GenericMotor,
-                     GenericDCMotor, MessageIDs)
+from .common import (
+    KinesisError,
+    MessageType,
+    GenericDevice,
+    GenericMotor,
+    GenericDCMotor,
+    MessageIDs,
+)
 from cffi import FFI
 import nicelib  # noqa (nicelib dep is hidden behind import of isc_midlib)
 
@@ -20,8 +26,9 @@ STATUS_JOGGING_CCW = 0x80
 
 ffi = FFI()
 
+
 class K10CR1(Motion):
-    """ Class for controlling Thorlabs K10CR1 integrated stepper rotation stages
+    """Class for controlling Thorlabs K10CR1 integrated stepper rotation stages
 
     Takes the serial number of the device as a string as well as the gear box ratio,
     steps per revolution and microsteps per step as integers. It also takes the polling
@@ -31,7 +38,8 @@ class K10CR1(Motion):
     passed as a pint pint quantity with units of time and is optional argument,
     with a default of 200ms
     """
-    _INST_PARAMS_ = ['serial']
+
+    _INST_PARAMS_ = ["serial"]
 
     _lib = NiceISC
 
@@ -41,15 +49,21 @@ class K10CR1(Motion):
     GenericMotor = GenericMotor
     GenericDCMotor = GenericDCMotor
 
-    @check_units(polling_period='ms')
-    def _initialize(self, gear_box_ratio=120, steps_per_rev=200, micro_steps_per_step=2048,
-                    polling_period='200ms'):
-        offset = self._paramset.get('offset', '0 deg')
+    @check_units(polling_period="ms")
+    def _initialize(
+        self,
+        gear_box_ratio=120,
+        steps_per_rev=200,
+        micro_steps_per_step=2048,
+        polling_period="200ms",
+    ):
+        offset = self._paramset.get("offset", "0 deg")
 
-        self.serial = self._paramset['serial']
+        self.serial = self._paramset["serial"]
         self.offset = offset
-        self._unit_scaling = (gear_box_ratio * micro_steps_per_step *
-                              steps_per_rev / (360.0 * u.deg))
+        self._unit_scaling = (
+            gear_box_ratio * micro_steps_per_step * steps_per_rev / (360.0 * u.deg)
+        )
         self._open()
         self._start_polling(polling_period)
         self._wait_for_message(GenericDevice.SettingsInitialized)
@@ -63,8 +77,8 @@ class K10CR1(Motion):
         self.dev.StopPolling()
         self.dev.Close()
 
-    @check_units(polling_period='ms')
-    def _start_polling(self, polling_period='200ms'):
+    @check_units(polling_period="ms")
+    def _start_polling(self, polling_period="200ms"):
         """Starts polling the device to update its status with the given period provided, rounded
         to the nearest millisecond
 
@@ -73,13 +87,13 @@ class K10CR1(Motion):
         polling_period: pint quantity with units of time
         """
         self.polling_period = polling_period
-        self.dev.StartPolling(self.polling_period.m_as('ms'))
+        self.dev.StartPolling(self.polling_period.m_as("ms"))
 
     def get_info(self):
         description = NiceISC.GetDeviceInfo(self.serial).description
         return ffi.string(description)
 
-    @check_units(angle='deg')
+    @check_units(angle="deg")
     def move_to(self, angle, wait=False):
         """Rotate the stage to the given angle in absolute units
 
@@ -96,7 +110,7 @@ class K10CR1(Motion):
         if wait:
             self.wait_for_move()
 
-    @check_units(angle='deg')
+    @check_units(angle="deg")
     def move_relative(self, angle, wait=False):
         """Rotate the stage to the given angle relative to current position
 
@@ -156,9 +170,9 @@ class K10CR1(Motion):
         return self._check_for_message(GenericMotor.Moved)
 
     def _to_real_units(self, dev_units):
-        return (dev_units / self._unit_scaling).to('deg')
+        return (dev_units / self._unit_scaling).to("deg")
 
-    @check_units(real_units='deg')
+    @check_units(real_units="deg")
     def _to_dev_units(self, real_units):
         return int(round(float(real_units * self._unit_scaling)))
 
@@ -189,7 +203,7 @@ class K10CR1(Motion):
         """True if the device needs to be homed before a move can be performed"""
         return bool(self.dev.NeedsHoming())
 
-    @Facet(units='deg')
+    @Facet(units="deg")
     def offset(self):
         return self._offset
 
@@ -197,7 +211,7 @@ class K10CR1(Motion):
     def offset(self, offset):
         self._offset = offset
 
-    @Facet(units='deg')
+    @Facet(units="deg")
     def backlash(self):
         return self._to_real_units(self.dev.GetBacklash())
 
@@ -205,7 +219,7 @@ class K10CR1(Motion):
     def backlash(self, angle):
         self.dev.SetBacklash(self._to_dev_units(angle))
 
-    @Facet(units='deg')
+    @Facet(units="deg")
     def position(self):
         return self._to_real_units(self.dev.GetPosition()) - self.offset
 

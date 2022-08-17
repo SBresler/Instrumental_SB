@@ -11,14 +11,17 @@ from .errors import TimeoutError
 
 def save_result(filename):
     """Decorator to save return value(s)"""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwds):
             retval = func(*args, **kwds)
-            with open(filename, 'wb') as fh:
+            with open(filename, "wb") as fh:
                 pickle.dump(retval, fh)
             return retval
+
         return wrapper
+
     return decorator
 
 
@@ -30,22 +33,25 @@ def cached_as(filename):
     for later use.
     """
     import os.path
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwds):
             if os.path.exists(filename):
-                with open(filename, 'rb') as fh:
+                with open(filename, "rb") as fh:
                     return pickle.load(fh)
             else:
                 retval = func(*args, **kwds)
-                with open(filename, 'wb') as fh:
+                with open(filename, "wb") as fh:
                     pickle.dump(retval, fh)
                 return retval
+
         return wrapper
+
     return decorator
 
 
-def to_str(value, encoding='utf-8'):
+def to_str(value, encoding="utf-8"):
     """Convert value to a str type
 
     Returns a bytes object in Python 2, and a unicode string in Python 3. Encodes or decodes the
@@ -86,6 +92,7 @@ def call_with_timeout(func, timeout):
 # From http://code.activestate.com/recipes/576563-cached-property/#c3
 def cached_property(fun):
     """A memoize decorator for class properties."""
+
     @wraps(fun)
     def get(self):
         try:
@@ -96,4 +103,5 @@ def cached_property(fun):
             pass
         ret = self._cache[fun] = fun(self)
         return ret
+
     return property(get)

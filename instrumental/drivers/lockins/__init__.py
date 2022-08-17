@@ -8,5 +8,3 @@ from .. import Instrument
 
 class Lockin(Instrument):
     pass
-
-

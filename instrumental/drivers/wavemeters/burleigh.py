@@ -14,57 +14,57 @@ from ... import Q_
 
 # Constants; See Appendix A of WA-1000/1500 manual for details
 # 'Hard' command codes
-_BTN_0 = b'@\x00'
-_BTN_1 = b'@\x01'
-_BTN_2 = b'@\x02'
-_BTN_3 = b'@\x03'
-_BTN_4 = b'@\x04'
-_BTN_5 = b'@\x05'
-_BTN_6 = b'@\x06'
-_BTN_7 = b'@\x07'
-_BTN_8 = b'@\x08'
-_BTN_9 = b'@\x09'
-_BTN_CLEAR = b'@\x0A'
-_BTN_DOT = b'@\x0B'
-_BTN_ENTER = b'@\x0C'
-_BTN_REMOTE = b'@\x0D'
-_BTN_SAVE = b'@\x0E'
-_BTN_RESET = b'@\x0F'
-_BTN_MANUAL_DEATTENUATE = b'@\x10'
-_BTN_MANUAL_ATTENUATE = b'@\x11'
-_BTN_AUTO_ATTENUATE = b'@\x13'
-_BTN_HUMIDITY = b'@\x20'
-_BTN_PRESSURE = b'@\x21'
-_BTN_TEMPERATURE = b'@\x22'
-_BTN_NUM_AVERAGED = b'@\x23'
-_BTN_ANALOG_RES = b'@\x24'
-_BTN_DISPLAY_RES = b'@\x25'
-_BTN_SETPOINT = b'@\x26'
-_BTN_UNITS = b'@\x27'
-_BTN_DISPLAY = b'@\x28'
-_BTN_MEDIUM = b'@\x29'
-_BTN_RESOLUTION = b'@\x2A'
-_BTN_AVERAGING = b'@\x2B'
+_BTN_0 = b"@\x00"
+_BTN_1 = b"@\x01"
+_BTN_2 = b"@\x02"
+_BTN_3 = b"@\x03"
+_BTN_4 = b"@\x04"
+_BTN_5 = b"@\x05"
+_BTN_6 = b"@\x06"
+_BTN_7 = b"@\x07"
+_BTN_8 = b"@\x08"
+_BTN_9 = b"@\x09"
+_BTN_CLEAR = b"@\x0A"
+_BTN_DOT = b"@\x0B"
+_BTN_ENTER = b"@\x0C"
+_BTN_REMOTE = b"@\x0D"
+_BTN_SAVE = b"@\x0E"
+_BTN_RESET = b"@\x0F"
+_BTN_MANUAL_DEATTENUATE = b"@\x10"
+_BTN_MANUAL_ATTENUATE = b"@\x11"
+_BTN_AUTO_ATTENUATE = b"@\x13"
+_BTN_HUMIDITY = b"@\x20"
+_BTN_PRESSURE = b"@\x21"
+_BTN_TEMPERATURE = b"@\x22"
+_BTN_NUM_AVERAGED = b"@\x23"
+_BTN_ANALOG_RES = b"@\x24"
+_BTN_DISPLAY_RES = b"@\x25"
+_BTN_SETPOINT = b"@\x26"
+_BTN_UNITS = b"@\x27"
+_BTN_DISPLAY = b"@\x28"
+_BTN_MEDIUM = b"@\x29"
+_BTN_RESOLUTION = b"@\x2A"
+_BTN_AVERAGING = b"@\x2B"
 
 _CHAR_TO_BTN = {
-    '0': _BTN_0,
-    '1': _BTN_1,
-    '2': _BTN_2,
-    '3': _BTN_3,
-    '4': _BTN_4,
-    '5': _BTN_5,
-    '6': _BTN_6,
-    '7': _BTN_7,
-    '8': _BTN_8,
-    '9': _BTN_9,
-    '.': _BTN_DOT
+    "0": _BTN_0,
+    "1": _BTN_1,
+    "2": _BTN_2,
+    "3": _BTN_3,
+    "4": _BTN_4,
+    "5": _BTN_5,
+    "6": _BTN_6,
+    "7": _BTN_7,
+    "8": _BTN_8,
+    "9": _BTN_9,
+    ".": _BTN_DOT,
 }
 
 # 'Soft' command codes
-_SET_BROADCAST = b'@\x42'
-_SET_DEVIATION_ON = b'@\x44'
-_SET_QUERY = b'@\x51'
-_SET_DEVIATION_OFF = b'@\x55'
+_SET_BROADCAST = b"@\x42"
+_SET_DEVIATION_ON = b"@\x44"
+_SET_QUERY = b"@\x51"
+_SET_DEVIATION_OFF = b"@\x55"
 
 # Display LED masks
 _MASK_UNITS_NM = 0x0009
@@ -102,7 +102,7 @@ _SYS_MASK_TO_CMD = {
     _MASK_ANALOG_RES: _BTN_ANALOG_RES,
     _MASK_PRESSURE: _BTN_PRESSURE,
     _MASK_TEMPERATURE: _BTN_TEMPERATURE,
-    _MASK_HUMIDITY: _BTN_HUMIDITY
+    _MASK_HUMIDITY: _BTN_HUMIDITY,
 }
 
 
@@ -111,9 +111,9 @@ def _check_visa_support(visa_inst):
         try:
             # Check that we get a vaguely Burleigh-like response
             resp = visa_inst.query(_SET_QUERY)
-            if resp.count(b',') == 2:
+            if resp.count(b",") == 2:
                 visa_inst.clear()
-                return 'WA_1000'
+                return "WA_1000"
         except:
             pass
     return None
@@ -121,12 +121,13 @@ def _check_visa_support(visa_inst):
 
 class WA_1000(Wavemeter):
     """A Burleigh WA-1000/1500 wavemeter"""
+
     _INST_PRIORITY_ = 9
-    _INST_PARAMS_ = ['visa_address']
+    _INST_PARAMS_ = ["visa_address"]
 
     def _initialize(self):
-        self._rsrc.read_termination = '\r\n'
-        self._rsrc.write_termination = '\r\n'
+        self._rsrc.read_termination = "\r\n"
+        self._rsrc.write_termination = "\r\n"
         self.reload_needed = False
 
         # Disable broadcast mode and clear the buffer
@@ -136,7 +137,7 @@ class WA_1000(Wavemeter):
     def _load_state(self):
         """Query the meter and set self.(disp_str, disp_leds, sys_leds)"""
         response = self.query(_SET_QUERY)
-        self.disp_str, disp_leds, sys_leds = response.split(b',')
+        self.disp_str, disp_leds, sys_leds = response.split(b",")
         self.disp_leds = int(disp_leds, 16)
         self.sys_leds = int(sys_leds, 16)
         self.reload_needed = False
@@ -148,7 +149,7 @@ class WA_1000(Wavemeter):
     def _write_float(self, num):
         self.write(_BTN_CLEAR)
 
-        num_str = '{:.4f}'.format(float(num))
+        num_str = "{:.4f}".format(float(num))
         for char in num_str:
             self.write(_CHAR_TO_BTN[char])
 
@@ -160,7 +161,7 @@ class WA_1000(Wavemeter):
     def _write_int(self, num):
         self.write(_BTN_CLEAR)
 
-        num_str = '{:d}'.format(int(num))
+        num_str = "{:d}".format(int(num))
         for char in num_str:
             self.write(_CHAR_TO_BTN[char])
 
@@ -224,9 +225,9 @@ class WA_1000(Wavemeter):
 
     def _handle_bad_disp_str(self):
         s = self.disp_str[1:].strip()
-        if s == b'LO SIG':
+        if s == b"LO SIG":
             raise Exception("Input signal power is too low")
-        elif s == b'HI SIG':
+        elif s == b"HI SIG":
             raise Exception("Input signal power is too high")
         else:
             raise Exception("Unrecognized display string '{}'".format(self.disp_str))
@@ -250,10 +251,12 @@ class WA_1000(Wavemeter):
 
         # Check for uncertainty
         sign = self.disp_str[0]
-        if sign == b'~':
-            warnings.warn("An instability has been detected in the input "
-                          "laser system that may cause increased "
-                          "uncertainty in the measurement")
+        if sign == b"~":
+            warnings.warn(
+                "An instability has been detected in the input "
+                "laser system that may cause increased "
+                "uncertainty in the measurement"
+            )
 
         # Parse rest of the wavelength display string
         try:
@@ -261,7 +264,7 @@ class WA_1000(Wavemeter):
         except ValueError:
             self._handle_bad_disp_str()
 
-        return Q_(value, 'nm')
+        return Q_(value, "nm")
 
     def get_wavelength(self):
         """Get the wavelength
@@ -306,7 +309,7 @@ class WA_1000(Wavemeter):
         except ValueError:
             self._handle_bad_disp_str()
 
-        return Q_(value, 'nm')
+        return Q_(value, "nm")
 
     def set_setpoint(self, setpoint):
         """Set the wavelength setpoint
@@ -319,7 +322,7 @@ class WA_1000(Wavemeter):
         setpoint : Quantity
             Wavelength of the setpoint, in units of [length]
         """
-        setpoint = Q_(setpoint).to('nm')
+        setpoint = Q_(setpoint).to("nm")
 
         self._show_setpoint()
         self._toggle_units_to_nm()
@@ -391,7 +394,7 @@ class WA_1000(Wavemeter):
         except ValueError:
             self._handle_bad_disp_str()
 
-        return Q_(temp, 'degC')
+        return Q_(temp, "degC")
 
     def get_pressure(self):
         """Get the barometric pressure inside the wavemeter
@@ -411,7 +414,7 @@ class WA_1000(Wavemeter):
         except ValueError:
             self._handle_bad_disp_str()
 
-        return Q_(pressure, 'mmHg')
+        return Q_(pressure, "mmHg")
 
     def lock(self, lock=True):
         """Lock the front panel of the wavemeter, preventing manual input

@@ -30,7 +30,7 @@ def _get_line_tups(*args):
     string_like = (str, np.str_)
     lines = []
     while args:
-        fmt = ''
+        fmt = ""
         y = Q_(args[0])
         if len(args) > 1:
             if isinstance(args[1], string_like):
@@ -53,16 +53,16 @@ def _get_line_tups(*args):
 
 
 def _pluralize(unit_name):
-    if unit_name[-1] in ['s', 'z']:
+    if unit_name[-1] in ["s", "z"]:
         return unit_name
-    return unit_name + 's'
+    return unit_name + "s"
 
 
 def _to_engineering_notation(x):
     high = np.max(x)
     low = np.min(x)
     max_abs = max(np.abs(low), np.abs(high))
-    power = int(np.log10(max_abs.to_base_units().magnitude) // 3)*3
+    power = int(np.log10(max_abs.to_base_units().magnitude) // 3) * 3
 
 
 def xlabel(s, *args, **kwargs):
@@ -130,18 +130,17 @@ def _bbox_from_fontsize(left, bottom, right, height, fig=None):
 
     fig_inches = fig.get_size_inches()
     fig_w_in, fig_h_in = fig_inches
-    fontsize_rel_h = 12.0/(72*fig_h_in)
-    fontsize_rel_w = 12.0/(72*fig_w_in)
+    fontsize_rel_h = 12.0 / (72 * fig_h_in)
+    fontsize_rel_w = 12.0 / (72 * fig_w_in)
 
-    box_left_rel = left*fontsize_rel_w
-    box_bottom_rel = bottom*fontsize_rel_h
-    box_right_rel = 1 - right*fontsize_rel_w
-    box_height_rel = height*fontsize_rel_h
+    box_left_rel = left * fontsize_rel_w
+    box_bottom_rel = bottom * fontsize_rel_h
+    box_right_rel = 1 - right * fontsize_rel_w
+    box_height_rel = height * fontsize_rel_h
 
-    return Bbox.from_extents(box_left_rel,
-                             box_bottom_rel,
-                             box_right_rel,
-                             box_bottom_rel+box_height_rel)
+    return Bbox.from_extents(
+        box_left_rel, box_bottom_rel, box_right_rel, box_bottom_rel + box_height_rel
+    )
 
 
 def _bbox_fixed_margin(left, bottom, right, top, fig=None):
@@ -150,18 +149,15 @@ def _bbox_fixed_margin(left, bottom, right, top, fig=None):
 
     fig_inches = fig.get_size_inches()
     fig_w_in, fig_h_in = fig_inches
-    fontsize_rel_h = 12.0/(72*fig_h_in)
-    fontsize_rel_w = 12.0/(72*fig_w_in)
+    fontsize_rel_h = 12.0 / (72 * fig_h_in)
+    fontsize_rel_w = 12.0 / (72 * fig_w_in)
 
-    box_left_rel = left*fontsize_rel_w
-    box_bottom_rel = bottom*fontsize_rel_h
-    box_right_rel = 1 - right*fontsize_rel_w
-    box_top_rel = 1 - top*fontsize_rel_h
+    box_left_rel = left * fontsize_rel_w
+    box_bottom_rel = bottom * fontsize_rel_h
+    box_right_rel = 1 - right * fontsize_rel_w
+    box_top_rel = 1 - top * fontsize_rel_h
 
-    return Bbox.from_extents(box_left_rel,
-                             box_bottom_rel,
-                             box_right_rel,
-                             box_top_rel)
+    return Bbox.from_extents(box_left_rel, box_bottom_rel, box_right_rel, box_top_rel)
 
 
 def _initialize_range_params(param_dict):
@@ -170,55 +166,55 @@ def _initialize_range_params(param_dict):
     """
     pd = param_dict
 
-    init = pd.get('init', 1)
-    pd.setdefault('min', min(0.8*init, 1.2*init))
-    pd.setdefault('max', max(0.8*init, 1.2*init))
-    pd.setdefault('init', (pd['max']-pd['min'])*0.5 + pd['min'])
+    init = pd.get("init", 1)
+    pd.setdefault("min", min(0.8 * init, 1.2 * init))
+    pd.setdefault("max", max(0.8 * init, 1.2 * init))
+    pd.setdefault("init", (pd["max"] - pd["min"]) * 0.5 + pd["min"])
 
-    if 'pm' in pd and 'init' in pd:
-        pd['min'] = pd['init'] - abs(pd['pm'])
-        pd['max'] = pd['init'] + abs(pd['pm'])
-    elif 'pm_pct' in pd and 'init' in pd:
-        diff = abs(pd['init']*pd['pm_pct']/100.0)
-        pd['min'] = pd['init'] - diff
-        pd['max'] = pd['init'] + diff
+    if "pm" in pd and "init" in pd:
+        pd["min"] = pd["init"] - abs(pd["pm"])
+        pd["max"] = pd["init"] + abs(pd["pm"])
+    elif "pm_pct" in pd and "init" in pd:
+        diff = abs(pd["init"] * pd["pm_pct"] / 100.0)
+        pd["min"] = pd["init"] - diff
+        pd["max"] = pd["init"] + diff
     else:
-        if 'min' in pd:
-            if 'max' in pd:
-                if 'init' not in pd:
-                    pd['init'] = (pd['max'] - pd['min'])*0.5
+        if "min" in pd:
+            if "max" in pd:
+                if "init" not in pd:
+                    pd["init"] = (pd["max"] - pd["min"]) * 0.5
                 else:
                     pass  # Add check if in range, clip or expand if necessary
             else:
-                if 'init' in pd:
+                if "init" in pd:
                     # Add check that init > min
-                    pd['max'] = pd['min'] + 2*(pd['init'] - pd['min'])
+                    pd["max"] = pd["min"] + 2 * (pd["init"] - pd["min"])
                 else:
-                    pd['init'] = max(pd['min']/0.8, pd['min']/1.2)
-                    pd['max'] = max(pd['init']*1.2, pd['init']*0.8)
+                    pd["init"] = max(pd["min"] / 0.8, pd["min"] / 1.2)
+                    pd["max"] = max(pd["init"] * 1.2, pd["init"] * 0.8)
         else:
-            if 'max' in pd:
-                if 'init' in pd:
+            if "max" in pd:
+                if "init" in pd:
                     # Add check that init < max
-                    pd['min'] = pd['max'] - 2*(pd['max'] - pd['init'])
+                    pd["min"] = pd["max"] - 2 * (pd["max"] - pd["init"])
                 else:
-                    pd['init'] = min(pd['max']/1.2, pd['max']/0.8)
-                    pd['min'] = min(pd['init']*0.8, pd['init']*1.2)
+                    pd["init"] = min(pd["max"] / 1.2, pd["max"] / 0.8)
+                    pd["min"] = min(pd["init"] * 0.8, pd["init"] * 1.2)
             else:
-                if 'init' in pd:
-                    pd['min'] = min(pd['init']*0.8, pd['init']*1.2)
-                    pd['max'] = max(pd['init']*1.2, pd['init']*0.8)
+                if "init" in pd:
+                    pd["min"] = min(pd["init"] * 0.8, pd["init"] * 1.2)
+                    pd["max"] = max(pd["init"] * 1.2, pd["init"] * 0.8)
                 else:
-                    pd['min'] = 0.0
-                    pd['init'] = 0.5
-                    pd['max'] = 1.0
+                    pd["min"] = 0.0
+                    pd["init"] = 0.5
+                    pd["max"] = 1.0
 
     try:
-        units = pd['init'].units
-        pd['units'] = pd['init'].units
-        pd['init'] = pd['init'].magnitude
-        pd['min'] = pd['min'].to(units).magnitude
-        pd['max'] = pd['max'].to(units).magnitude
+        units = pd["init"].units
+        pd["units"] = pd["init"].units
+        pd["init"] = pd["init"].magnitude
+        pd["min"] = pd["min"].to(units).magnitude
+        pd["max"] = pd["max"].to(units).magnitude
     except AttributeError:
         pass
 
@@ -227,9 +223,9 @@ def _initialize_params(params):
     """
     Helper function to ensure 'params' is in a nice state for later use.
     """
-    if 'order' in params:
+    if "order" in params:
         # Sort using provided key ordering
-        p = OrderedDict( ((k, params[k]) for k in params['order']) )
+        p = OrderedDict(((k, params[k]) for k in params["order"]))
     else:
         # Order alphabetically by key name
         p = OrderedDict(sorted(params.items(), key=lambda t: t[0]))
@@ -238,12 +234,12 @@ def _initialize_params(params):
 
         # Allow shorhand where only initial value is specified
         if not isinstance(pd, Mapping):
-            pd = {'init': pd}
+            pd = {"init": pd}
             p[k] = pd
 
         _initialize_range_params(pd)
 
-        pd.setdefault('label', k.title())
+        pd.setdefault("label", k.title())
 
     return p
 
@@ -267,17 +263,15 @@ def _bbox_with_margins(left, bottom, right, top):
 
 
 def _slider_bbox(i, fig=None):
-    return _bbox_from_fontsize(slider_pad_left,
-                               1+i*slider_fullheight,
-                               slider_pad_right,
-                               slider_height,
-                               fig)
+    return _bbox_from_fontsize(
+        slider_pad_left, 1 + i * slider_fullheight, slider_pad_right, slider_height, fig
+    )
 
 
 def _main_ax_bbox(ax, i, fig=None):
     left = 3.0 + (2 if ax.get_ylabel() else 0)
     right = 1.4
-    bottom = 2.0 + (2 if ax.get_xlabel() else 0) + i*slider_fullheight
+    bottom = 2.0 + (2 if ax.get_xlabel() else 0) + i * slider_fullheight
     top = 1.4 + (1 if ax.get_title() else 0)
     return _bbox_fixed_margin(left, bottom, right, top, fig)
 
@@ -287,8 +281,8 @@ def _unitify(param_dict, value):
     Helper function to create a pint.Quantity from the dict of a given
     parameter. Returns just the value if units weren't provided.
     """
-    if 'units' in param_dict:
-        return u.Quantity(value, param_dict['units'])
+    if "units" in param_dict:
+        return u.Quantity(value, param_dict["units"])
     return value
 
 
@@ -319,17 +313,17 @@ def param_plot(x, func, params, **kwargs):
     """
 
     params = _initialize_params(params)
-    flat_params = {k: _unitify(v, v['init']) for k, v in params.iteritems()}
+    flat_params = {k: _unitify(v, v["init"]) for k, v in params.iteritems()}
 
     # Set up figure and axes that we'll plot on
     fig = plt.figure()
     ax0 = fig.add_axes([0, 0, 1, 1])
 
-    l, = ax0.plot(x, func(x, **flat_params), **kwargs)
+    (l,) = ax0.plot(x, func(x, **flat_params), **kwargs)
 
     # Function for redrawing curve when a parameter value is changed
     def update(val):
-        param_args = {k: _unitify(v, v['slider'].val) for k, v in params.iteritems()}
+        param_args = {k: _unitify(v, v["slider"].val) for k, v in params.iteritems()}
         l.set_ydata(func(x, **param_args))
         fig.canvas.draw_idle()
 
@@ -339,19 +333,19 @@ def param_plot(x, func, params, **kwargs):
     # Create axes and sliders for each parameter
     for i, (name, vals) in enumerate(params.iteritems()):
         ax = plt.axes(_slider_bbox(i).bounds)
-        slider = Slider(ax, vals['label'], vals['min'], vals['max'], vals['init'])
+        slider = Slider(ax, vals["label"], vals["min"], vals["max"], vals["init"])
         slider.on_changed(update)
-        vals['ax'] = ax
-        vals['slider'] = slider
+        vals["ax"] = ax
+        vals["slider"] = slider
 
     # Function for auto-scaling sliders to (ironically) keep them fixed
     def resize_func(event):
         ax0.set_position(_main_ax_bbox(ax0, len(params), fig).bounds)
         for i, val in enumerate(params.itervalues()):
             box = _slider_bbox(i)
-            val['ax'].set_position(box)
+            val["ax"].set_position(box)
 
-    fig.canvas.mpl_connect('resize_event', resize_func)
+    fig.canvas.mpl_connect("resize_event", resize_func)
 
     # Set current axes to the one you'd expect
     plt.sca(ax0)

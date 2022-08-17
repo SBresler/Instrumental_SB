@@ -22,14 +22,14 @@ else:
     tokenize = _tokenize.tokenize
 
 
-IGNORED_IMPORTS = ['numpy', 'scipy', 'pint', 'future', 'past']
-VAR_NAMES = ['_INST_PARAMS', '_INST_PRIORITY', '_INST_CLASSES', '_INST_VISA_INFO']
-DVAR_NAMES = [v+'_' for v in VAR_NAMES]
+IGNORED_IMPORTS = ["numpy", "scipy", "pint", "future", "past"]
+VAR_NAMES = ["_INST_PARAMS", "_INST_PRIORITY", "_INST_CLASSES", "_INST_VISA_INFO"]
+DVAR_NAMES = [v + "_" for v in VAR_NAMES]
 DEFAULT_VALUES = {
-    '_INST_PARAMS': [],
-    '_INST_PRIORITY': 5,
-    '_INST_CLASSES': [],
-    '_INST_VISA_INFO': {},
+    "_INST_PARAMS": [],
+    "_INST_PRIORITY": 5,
+    "_INST_CLASSES": [],
+    "_INST_VISA_INFO": {},
 }
 
 
@@ -42,21 +42,21 @@ class ClassInfo(object):
         self.children = []
 
     def __repr__(self):
-        return '<{}.{}: {}>'.format(self.module, self.name, self.children)
+        return "<{}.{}: {}>".format(self.module, self.name, self.children)
 
 
 def get_submodules(root_dir):
     """Yield the relpaths of all non-underscored python files nested within root_dir"""
     for root, dirs, files in os.walk(root_dir):
         for filename in files:
-            if not filename.startswith('_') and filename.endswith('.py'):
+            if not filename.startswith("_") and filename.endswith(".py"):
                 yield os.path.join(root, filename)
 
 
 def analyze_file(fpath):
     """Parse special vars and imports from the given python source file"""
-    print('Parsing {}'.format(fpath))
-    with io.open(fpath, 'rb') as f:
+    print("Parsing {}".format(fpath))
+    with io.open(fpath, "rb") as f:
         source = f.read()
     root = ast.parse(source)
     has_special_vars, values = get_module_level_special_vars(fpath, root)
@@ -67,7 +67,9 @@ def analyze_file(fpath):
     print(caf.class_info)
     if caf.has_class_vars:
         if has_special_vars:
-            raise ValueError("Can't mix module-level and class-level special INSTR vars")
+            raise ValueError(
+                "Can't mix module-level and class-level special INSTR vars"
+            )
         classes = []
         params = set()
         priority = 5
@@ -76,17 +78,17 @@ def analyze_file(fpath):
             if not vars:
                 continue
             classes.append(classname)
-            params = params.union(vars.get('_INST_PARAMS_', ()))
-            priority = max(priority, vars.get('_INST_PRIORITY_', 5))
-            if '_INST_VISA_INFO_' in vars:
-                visa_info[classname] = vars['_INST_VISA_INFO_']
-        values['_INST_CLASSES'] = classes
-        values['_INST_PARAMS'] = list(params)
-        values['_INST_PRIORITY'] = priority
-        values['_INST_VISA_INFO'] = visa_info or None
+            params = params.union(vars.get("_INST_PARAMS_", ()))
+            priority = max(priority, vars.get("_INST_PRIORITY_", 5))
+            if "_INST_VISA_INFO_" in vars:
+                visa_info[classname] = vars["_INST_VISA_INFO_"]
+        values["_INST_CLASSES"] = classes
+        values["_INST_PARAMS"] = list(params)
+        values["_INST_PRIORITY"] = priority
+        values["_INST_VISA_INFO"] = visa_info or None
         has_special_vars = True
 
-    values['nonstd_imports'] = filter_std_modules(requirements)
+    values["nonstd_imports"] = filter_std_modules(requirements)
     return has_special_vars, values
 
 
@@ -104,11 +106,11 @@ def special_file_info(root_dir):
 def driver_special_info():
     """Get info from driver submodules, including nested ones"""
     info = {}
-    drivers_dir = os.path.join(THIS_DIR, 'drivers')
+    drivers_dir = os.path.join(THIS_DIR, "drivers")
     for path_list, vars in special_file_info(drivers_dir):
         if len(path_list) < 2:
             continue
-        driver_module = '.'.join(path_list)
+        driver_module = ".".join(path_list)
         info[driver_module] = vars
     return info
 
@@ -116,12 +118,12 @@ def driver_special_info():
 def driver_special_info_squashed():
     """Get info from driver submodules, consolidating sub-submodules (even underscored ones)"""
     info = {}
-    drivers_dir = os.path.join(THIS_DIR, 'drivers')
+    drivers_dir = os.path.join(THIS_DIR, "drivers")
     for path_list, vars in special_file_info(drivers_dir):
         if len(path_list) < 2:
             continue
         category, driver = path_list[:2]
-        driver_str = category + '.' + driver.strip('_')
+        driver_str = category + "." + driver.strip("_")
 
         old_vars = info.setdefault(driver_str, {})
         add_driver_info(old_vars, vars)
@@ -130,14 +132,14 @@ def driver_special_info_squashed():
 
 def add_driver_info(old, new):
     """Update one _INST_ dict from another"""
-    combine_sorted(old.setdefault('_INST_CLASSES', []), new['_INST_CLASSES'])
-    combine_sorted(old.setdefault('_INST_PARAMS', []), new['_INST_PARAMS'])
-    old['_INST_PRIORITY'] = max(old.get('_INST_PRIORITY', 5), new['_INST_PRIORITY'])
-    combine_sorted(old.setdefault('nonstd_imports', []), new['nonstd_imports'])
+    combine_sorted(old.setdefault("_INST_CLASSES", []), new["_INST_CLASSES"])
+    combine_sorted(old.setdefault("_INST_PARAMS", []), new["_INST_PARAMS"])
+    old["_INST_PRIORITY"] = max(old.get("_INST_PRIORITY", 5), new["_INST_PRIORITY"])
+    combine_sorted(old.setdefault("nonstd_imports", []), new["nonstd_imports"])
 
-    if '_INST_VISA_INFO_' in new:
-        visa_info = old.setdefault('INST_VISA_INFO', {})
-        visa_info.update(new['_INST_VISA_INFO'])
+    if "_INST_VISA_INFO_" in new:
+        visa_info = old.setdefault("INST_VISA_INFO", {})
+        visa_info.update(new["_INST_VISA_INFO"])
 
 
 def combine_sorted(old, new):
@@ -147,18 +149,18 @@ def combine_sorted(old, new):
 
 def get_subclass_tree():
     base = []
-    for cat_name in os.listdir(os.path.join(THIS_DIR, 'drivers')):
-        category_path = os.path.join(THIS_DIR, 'drivers', cat_name)
-        if not category_path.is_dir() or cat_name.startswith('_'):
+    for cat_name in os.listdir(os.path.join(THIS_DIR, "drivers")):
+        category_path = os.path.join(THIS_DIR, "drivers", cat_name)
+        if not category_path.is_dir() or cat_name.startswith("_"):
             continue
 
-        cat_info_list = get_subclasses_of('Instrument', cat_name)
+        cat_info_list = get_subclasses_of("Instrument", cat_name)
 
         for cat_info in cat_info_list:
             for d_name in os.listdir(category_path):
-                if d_name.startswith('_') or not d_name.endswith('.py'):
+                if d_name.startswith("_") or not d_name.endswith(".py"):
                     continue
-                mod_name = cat_name + '.' + d_name[:-3]
+                mod_name = cat_name + "." + d_name[:-3]
                 driver_info_list = get_subclasses_of(cat_info.name, mod_name)
                 cat_info.children.extend(driver_info_list)
 
@@ -169,9 +171,9 @@ def get_subclass_tree():
 
 def parse_subclasses():
     subclasses = []
-    for name in os.listdir(os.path.join(THIS_DIR, 'drivers')):
-        path = os.path.join(THIS_DIR, 'drivers', name)
-        if not os.path.isdir(path) or name.startswith('_'):
+    for name in os.listdir(os.path.join(THIS_DIR, "drivers")):
+        path = os.path.join(THIS_DIR, "drivers", name)
+        if not os.path.isdir(path) or name.startswith("_"):
             continue
         analyze_driver_category(path)
 
@@ -184,8 +186,8 @@ def parse_file(path):
 
 
 def analyze_driver_category(path):
-    root = parse_file(os.path.join(path, '__init__.py'))
-    get_subclasses_of('Instrument', root)
+    root = parse_file(os.path.join(path, "__init__.py"))
+    get_subclasses_of("Instrument", root)
 
 
 def analyze_driver_module():
@@ -197,16 +199,16 @@ def analyze_driver_class():
 
 
 def parse_module2(module_name):
-    parts = module_name.split('.')
+    parts = module_name.split(".")
 
     if len(parts) == 1:
-        category, = parts
-        path = os.path.join(THIS_DIR, 'drivers', category, '__init__.py')
+        (category,) = parts
+        path = os.path.join(THIS_DIR, "drivers", category, "__init__.py")
     elif len(parts) == 2:
         category, driver = parts
-        path = os.path.join(THIS_DIR, 'drivers', category, (driver + '.py'))
+        path = os.path.join(THIS_DIR, "drivers", category, (driver + ".py"))
     else:
-        raise ValueError('Unknown module {}'.format(module_name))
+        raise ValueError("Unknown module {}".format(module_name))
 
     with open(path) as f:
         return ast.parse(f.read())
@@ -226,8 +228,8 @@ def get_subclasses_of(name, module_name):
 
 
 def load_module_source(module):
-    outer, inner = module.split('.')
-    with io.open(os.path.join(THIS_DIR, 'drivers', outer, inner+'.py'), 'rb') as f:
+    outer, inner = module.split(".")
+    with io.open(os.path.join(THIS_DIR, "drivers", outer, inner + ".py"), "rb") as f:
         source = f.read()
     return source
 
@@ -242,24 +244,29 @@ def filter_std_modules(imports, ignore=IGNORED_IMPORTS):
 
 
 def driver_groups():
-    return [g for g in os.listdir(os.path.join(THIS_DIR, 'drivers'))
-            if os.path.isdir(os.path.join(THIS_DIR, 'drivers', g)) and not g.startswith('_')]
+    return [
+        g
+        for g in os.listdir(os.path.join(THIS_DIR, "drivers"))
+        if os.path.isdir(os.path.join(THIS_DIR, "drivers", g)) and not g.startswith("_")
+    ]
 
 
 def list_drivers():
     for group in driver_groups():
-        group_dir = os.path.join(THIS_DIR, 'drivers', group)
+        group_dir = os.path.join(THIS_DIR, "drivers", group)
         for fname in os.listdir(group_dir):
-            if fname.endswith('.py') and not fname.startswith('_'):
+            if fname.endswith(".py") and not fname.startswith("_"):
                 mod_name = fname[:-3]
-                yield group + '.' + mod_name
+                yield group + "." + mod_name
 
 
 def get_module_level_special_vars(module_name, root):
     has_special_vars = False
     values = DEFAULT_VALUES.copy()
 
-    assignments = (n for n in root.body if isinstance(n, ast.Assign) and len(n.targets) == 1)
+    assignments = (
+        n for n in root.body if isinstance(n, ast.Assign) and len(n.targets) == 1
+    )
     for assignment in assignments:
         target = assignment.targets[0]
         if isinstance(target, ast.Name):
@@ -269,7 +276,11 @@ def get_module_level_special_vars(module_name, root):
                     values[var_name] = ast.literal_eval(assignment.value)
                     has_special_vars = True
                 except:
-                    log.info("Failed to eval value of %s in module '%s'", var_name, module_name)
+                    log.info(
+                        "Failed to eval value of %s in module '%s'",
+                        var_name,
+                        module_name,
+                    )
     return has_special_vars, values
 
 
@@ -279,7 +290,7 @@ def get_imports(source, root):
     for node in root.body:
         if isinstance(node, ast.Import):
             imported_modules.extend(n.name for n in node.names)
-            linenos.extend([node.lineno]*len(node.names))
+            linenos.extend([node.lineno] * len(node.names))
         elif isinstance(node, ast.ImportFrom):
             # Ignore dot-prefixed imports
             if node.level == 0:
@@ -292,22 +303,22 @@ def get_imports(source, root):
     tokens = tokenize(io.BytesIO(source).readline)
     for mod_name, lineno in zip(imported_modules, linenos):
         if mod_name is not None:
-            requirement = mod_name.split('.', 1)[0]
+            requirement = mod_name.split(".", 1)[0]
             comment = get_line_comment(tokens, lineno)
             if comment:
-                chunks = comment[1:].split(':')
-                if chunks[0].strip() == 'req':
+                chunks = comment[1:].split(":")
+                if chunks[0].strip() == "req":
                     requirement = chunks[1].strip()
             requirements.append(requirement)
     return requirements
 
 
 def parse_driver_modules(module_name):
-    driver_dir = os.path.join(THIS_DIR, 'drivers', *(module_name.split('.')))
+    driver_dir = os.path.join(THIS_DIR, "drivers", *(module_name.split(".")))
     for fname in os.listdir(driver_dir):
-        if fname.endswith('.py') and not fname.startswith('_'):
+        if fname.endswith(".py") and not fname.startswith("_"):
             mod_name = fname[:-3]
-            yield group + '.' + mod_name
+            yield group + "." + mod_name
 
 
 def parse_driver_modules(module_name):
@@ -318,10 +329,12 @@ def parse_driver_modules(module_name):
     requirements = get_imports(source, root)
 
     # TODO: Make per-class priority, params, etc. (maybe)
-    caf = ClassAttrFinder(root, 'instrumental.drivers.' + module_name)
+    caf = ClassAttrFinder(root, "instrumental.drivers." + module_name)
     if caf.has_class_vars:
         if has_special_vars:
-            raise ValueError("Can't mix module-level and class-level special INSTR vars")
+            raise ValueError(
+                "Can't mix module-level and class-level special INSTR vars"
+            )
         classes = []
         params = set()
         priority = 5
@@ -330,17 +343,17 @@ def parse_driver_modules(module_name):
             if not vars:
                 continue
             classes.append(classname)
-            params = params.union(vars.get('_INST_PARAMS_', ()))
-            priority = max(priority, vars.get('_INST_PRIORITY_', 5))
-            if '_INST_VISA_INFO_' in vars:
-                visa_info[classname] = vars['_INST_VISA_INFO_']
-        values['_INST_CLASSES'] = classes
-        values['_INST_PARAMS'] = list(params)
-        values['_INST_PRIORITY'] = priority
-        values['_INST_VISA_INFO'] = visa_info
+            params = params.union(vars.get("_INST_PARAMS_", ()))
+            priority = max(priority, vars.get("_INST_PRIORITY_", 5))
+            if "_INST_VISA_INFO_" in vars:
+                visa_info[classname] = vars["_INST_VISA_INFO_"]
+        values["_INST_CLASSES"] = classes
+        values["_INST_PARAMS"] = list(params)
+        values["_INST_PRIORITY"] = priority
+        values["_INST_VISA_INFO"] = visa_info
         has_special_vars = True
 
-    values['nonstd_imports'] = filter_std_modules(requirements)
+    values["nonstd_imports"] = filter_std_modules(requirements)
     return has_special_vars, values
 
 
@@ -353,7 +366,13 @@ def get_line_comment(tokens, lineno):
     comment = None
     while True:
         token = next(tokens)
-        token_type, token_string, token_start, _, _ = token  # Py2 doesn't use namedtuple
+        (
+            token_type,
+            token_string,
+            token_start,
+            _,
+            _,
+        ) = token  # Py2 doesn't use namedtuple
         if token_start[0] < lineno:
             continue
         if token_type is _tokenize.COMMENT:
@@ -367,34 +386,37 @@ def generate_info_file():
     num_missing = 0
     mod_info = []
     for module_name, values in driver_special_info().items():
-        #has_special_vars, values = parse_driver_modules(module_name)
-        mod_info.append((values['_INST_PRIORITY'], module_name, values))
-        #if not has_special_vars:
+        # has_special_vars, values = parse_driver_modules(module_name)
+        mod_info.append((values["_INST_PRIORITY"], module_name, values))
+        # if not has_special_vars:
         #    num_missing += 1
         #    print("Module '{}' is missing its '_INST_*' variables".format(module_name))
     mod_info.sort()
 
-    print("{} of {} modules are missing their '_INST_*' variables".format(num_missing,
-                                                                          len(mod_info)))
+    print(
+        "{} of {} modules are missing their '_INST_*' variables".format(
+            num_missing, len(mod_info)
+        )
+    )
 
-    file_path = os.path.join(THIS_DIR, 'driver_info.py')
-    with open(file_path, 'w') as f:
-        f.write('# Auto-generated {}\n'.format(dt.datetime.now().isoformat()))
-        f.write('from collections import OrderedDict\n\n')
+    file_path = os.path.join(THIS_DIR, "driver_info.py")
+    with open(file_path, "w") as f:
+        f.write("# Auto-generated {}\n".format(dt.datetime.now().isoformat()))
+        f.write("from collections import OrderedDict\n\n")
 
         # Write parameters
-        f.write('driver_info = OrderedDict([\n')
+        f.write("driver_info = OrderedDict([\n")
         for _, module_name, values in mod_info:
-            params = sorted(values['_INST_PARAMS'])
-            classes = sorted(values['_INST_CLASSES'])
-            nonstd_imports = sorted(values['nonstd_imports'])
+            params = sorted(values["_INST_PARAMS"])
+            classes = sorted(values["_INST_CLASSES"])
+            nonstd_imports = sorted(values["nonstd_imports"])
             f.write("    ({!r}, {{\n".format(module_name))
             f.write("        'params': {!r},\n".format(params))
             f.write("        'classes': {!r},\n".format(classes))
             f.write("        'imports': {!r},\n".format(nonstd_imports))
 
-            if params and 'visa_address' in params:
-                visa_info = values.get('_INST_VISA_INFO')
+            if params and "visa_address" in params:
+                visa_info = values.get("_INST_VISA_INFO")
                 if not visa_info:
                     f.write("        'visa_info': {},\n")
                 else:
@@ -403,12 +425,13 @@ def generate_info_file():
                         f.write("            {!r}: {!r},\n".format(key, visa_info[key]))
                     f.write("        },\n")
 
-            f.write('    }),\n')
-        f.write('])\n')
+            f.write("    }),\n")
+        f.write("])\n")
 
 
 class ClassAttrFinder(ast.NodeVisitor):
     """A NodeVisitor to find special _INSTR_ class attributes"""
+
     def __init__(self, tree, module):
         self.ns = {}
         self.class_info = {}
@@ -423,10 +446,10 @@ class ClassAttrFinder(ast.NodeVisitor):
     def visit_ImportFrom(self, node):
         for alias in node.names:
             if node.module:
-                module_parts = node.module.split('.')
+                module_parts = node.module.split(".")
             else:
-                module_parts = self.module.split('.')[:-node.level]
-            self.ns[alias.asname or alias.name] = '.'.join(module_parts + [alias.name])
+                module_parts = self.module.split(".")[: -node.level]
+            self.ns[alias.asname or alias.name] = ".".join(module_parts + [alias.name])
 
     def visit_ClassDef(self, node):
         info = self.class_info[node.name] = {}
@@ -440,5 +463,5 @@ class ClassAttrFinder(ast.NodeVisitor):
                             self.has_class_vars = True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     generate_info_file()

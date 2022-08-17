@@ -22,10 +22,12 @@ __all__ = []
 # Lazily load required device-specific modules
 def list_instruments():
     NiceTLI.BuildDeviceList()
-    serial_nums = to_str(NiceTLI.GetDeviceListExt()).strip(',').split(',')
-    return [ParamSet(cls, serial=serial) for cls,serial in
-            ((_try_get_class(sn), sn) for sn in serial_nums)
-            if cls]
+    serial_nums = to_str(NiceTLI.GetDeviceListExt()).strip(",").split(",")
+    return [
+        ParamSet(cls, serial=serial)
+        for cls, serial in ((_try_get_class(sn), sn) for sn in serial_nums)
+        if cls
+    ]
 
 
 def initialize_simulations():
@@ -67,8 +69,8 @@ def _get_class(serial):
         pass
 
     dev_lib, inst_classname = DEVICE_CLASSES.get(type_id)
-    module_name = '._kinesis.{}'.format(dev_lib)
-    log.info('Importing %s...', module_name)
+    module_name = "._kinesis.{}".format(dev_lib)
+    log.info("Importing %s...", module_name)
     dev_module = import_module(module_name, __package__)
     dev_class = DEVICE_CLASS_CACHE[type_id] = getattr(dev_module, inst_classname)
     return dev_class
@@ -76,8 +78,8 @@ def _get_class(serial):
 
 # IDs can be found in "Device Serial Number prefix" section of Thorlabs.MotionControl.C_API docs
 DEVICE_CLASSES = {
-    37: ('ff', 'FilterFlipper'),
-    55: ('isc', 'K10CR1'),
+    37: ("ff", "FilterFlipper"),
+    55: ("isc", "K10CR1"),
 }
 
 DEVICE_CLASS_CACHE = {}

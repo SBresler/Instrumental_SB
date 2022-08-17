@@ -12,25 +12,25 @@ from warnings import warn
 from ast import literal_eval
 from . import appdirs
 
-__all__ = ['servers', 'instruments', 'prefs']
+__all__ = ["servers", "instruments", "prefs"]
 servers, instruments, prefs = {}, {}, {}
-appname = 'instrumental'
-appauthor = 'mabuchilab'
+appname = "instrumental"
+appauthor = "mabuchilab"
 user_conf_dir = appdirs.user_config_dir(appname, appauthor)
 user_data_dir = appdirs.user_data_dir(appname, appauthor)
 
 pkg_dir = os.path.abspath(os.path.dirname(__file__))
-user_conf_path = os.path.join(user_conf_dir, 'instrumental.conf')
-pkg_conf_path = os.path.join(pkg_dir, 'instrumental.conf.default')
+user_conf_path = os.path.join(user_conf_dir, "instrumental.conf")
+pkg_conf_path = os.path.join(pkg_dir, "instrumental.conf.default")
 
 # TODO: allow this to be set in the config file
-save_dir = os.path.join(user_data_dir, 'instruments')
+save_dir = os.path.join(user_data_dir, "instruments")
 
 
 def copy_file_text(from_path, to_path):
     """Copies a text file, using platform-specific line endings"""
-    with open(from_path, 'rU') as from_file:
-        with open(to_path, 'w') as to_file:
+    with open(from_path, "rU") as from_file:
+        with open(to_path, "w") as to_file:
             to_file.writelines((line for line in from_file))
 
 
@@ -43,7 +43,7 @@ def install_default_conf():
 
 
 def load_config_file():
-    global servers, instruments, prefs # Not strictly necessary, but suggestive
+    global servers, instruments, prefs  # Not strictly necessary, but suggestive
     parser = configparser.RawConfigParser()
     parser.optionxform = str  # Re-enable case sensitivity
 
@@ -71,20 +71,24 @@ def load_config_file():
             bad_value = True
 
         if bad_value or not isinstance(d, dict):
-            warn("Bad value for key `{}` in instrumental.conf. ".format(key) +
-                 "Values `instruments` section of instrumental.conf " +
-                 "must be written as python-style dictionaries. Remember to " +
-                 "enclose keys and values in quotes.")
+            warn(
+                "Bad value for key `{}` in instrumental.conf. ".format(key)
+                + "Values `instruments` section of instrumental.conf "
+                + "must be written as python-style dictionaries. Remember to "
+                + "enclose keys and values in quotes."
+            )
             d.pop(key)
         else:
             instruments[key] = d
 
-    if 'data_directory' in prefs:
-        prefs['data_directory'] = os.path.normpath(os.path.expanduser(prefs['data_directory']))
+    if "data_directory" in prefs:
+        prefs["data_directory"] = os.path.normpath(
+            os.path.expanduser(prefs["data_directory"])
+        )
 
-    blacklist = prefs.setdefault('driver_blacklist', [])
+    blacklist = prefs.setdefault("driver_blacklist", [])
     if blacklist:
-        prefs['driver_blacklist'] = [entry.strip() for entry in blacklist.split(',')]
+        prefs["driver_blacklist"] = [entry.strip() for entry in blacklist.split(",")]
 
 
 # Run on import

@@ -18,85 +18,85 @@ from ...errors import Error
 from ... import u
 
 _INST_PRIORITY = 9  # There's only one of these devices in existence
-_INST_PARAMS = ['port']
-_INST_CLASSES = ['SenTorrMod']
+_INST_PARAMS = ["port"]
+_INST_CLASSES = ["SenTorrMod"]
 
-TERMINATOR = b'\xfd\x49\xfd\x49'
-MSG_GET_ONE = b'\xd3'
-MSG_AUTOSEND = b'\xe8'
-MSG_NOAUTOSEND = b'\x8e'
+TERMINATOR = b"\xfd\x49\xfd\x49"
+MSG_GET_ONE = b"\xd3"
+MSG_AUTOSEND = b"\xe8"
+MSG_NOAUTOSEND = b"\x8e"
 
 err_map = {
-    '02 E': 'Pressure burst caused by a sudden rise in pressure at the ion gauge.',
-    '03 E': 'No ion current or measurement signal. Possibly a bad connection.',
-    '04 E': 'Filament overcurrent caused by a shorted filament current.',
-    '05 E': 'Filament undercurrent caused by an open filament; cable not properly connected; bad '
-            'control circuit or control circuit not properly installed.',
-    '06 E': 'Grid voltage low caused by a grounded grid or a bad grid supply.',
-    '07 E': 'Overtemperature caused by a temperature inside unit over 65°C',
-    '08 E': 'Board logic failure caused by a bad component or electrical noise.',
-    '09 E': 'Overpressure caused by an indicated pressure above high pressure limit of '
-            'the ion gauge.',
-    '12 E': 'Underpressure caused b y an indicated pressure beyond minimum pressure of ion gauge.',
-    '13 E': 'Insufficient current caused b y a dirty cold cathode gauge or an open '
-            'cable connection',
-    '14 E': 'Invalid keypress caused by a locked keypad.',
+    "02 E": "Pressure burst caused by a sudden rise in pressure at the ion gauge.",
+    "03 E": "No ion current or measurement signal. Possibly a bad connection.",
+    "04 E": "Filament overcurrent caused by a shorted filament current.",
+    "05 E": "Filament undercurrent caused by an open filament; cable not properly connected; bad "
+    "control circuit or control circuit not properly installed.",
+    "06 E": "Grid voltage low caused by a grounded grid or a bad grid supply.",
+    "07 E": "Overtemperature caused by a temperature inside unit over 65°C",
+    "08 E": "Board logic failure caused by a bad component or electrical noise.",
+    "09 E": "Overpressure caused by an indicated pressure above high pressure limit of "
+    "the ion gauge.",
+    "12 E": "Underpressure caused b y an indicated pressure beyond minimum pressure of ion gauge.",
+    "13 E": "Insufficient current caused b y a dirty cold cathode gauge or an open "
+    "cable connection",
+    "14 E": "Invalid keypress caused by a locked keypad.",
 }
 
 decode_BCD = {
-    0: '0',
-    1: '1',
-    2: '2',
-    3: '3',
-    4: '4',
-    5: '5',
-    6: '6',
-    7: '7',
-    8: '8',
-    9: '9',
-    10: '-',
-    11: 'E',
-    12: 'H',
-    13: 'L',
-    14: 'P',
-    15: ' '
+    0: "0",
+    1: "1",
+    2: "2",
+    3: "3",
+    4: "4",
+    5: "5",
+    6: "6",
+    7: "7",
+    8: "8",
+    9: "9",
+    10: "-",
+    11: "E",
+    12: "H",
+    13: "L",
+    14: "P",
+    15: " ",
 }
 
 digit_map = {
-    0b01111110: '0',
-    0b00110000: '1',
-    0b01101101: '2',
-    0b01111001: '3',
-    0b00110011: '4',
-    0b01011011: '5',
-    0b01011111: '6',
-    0b01110000: '7',
-    0b01111111: '8',
-    0b01111011: '9',
-    0b00000001: '-',
-    0b01110111: 'A',
-    0b01001110: 'C',
-    0b01001111: 'E',
-    0b01000111: 'F',
-    0b00110111: 'H',
-    0b00111100: 'J',
-    0b00001110: 'L',
-    0b01100111: 'P',
-    0b00111110: 'U',
-    0b00110110: 'X',
-    0b00000000: ' ',
+    0b01111110: "0",
+    0b00110000: "1",
+    0b01101101: "2",
+    0b01111001: "3",
+    0b00110011: "4",
+    0b01011011: "5",
+    0b01011111: "6",
+    0b01110000: "7",
+    0b01111111: "8",
+    0b01111011: "9",
+    0b00000001: "-",
+    0b01110111: "A",
+    0b01001110: "C",
+    0b01001111: "E",
+    0b01000111: "F",
+    0b00110111: "H",
+    0b00111100: "J",
+    0b00001110: "L",
+    0b01100111: "P",
+    0b00111110: "U",
+    0b00110110: "X",
+    0b00000000: " ",
 }
 
 sign_map = {
-    0b00000000: ' ',
-    0b00010000: '-',
-    0b01110000: '-1',
+    0b00000000: " ",
+    0b00010000: "-",
+    0b01110000: "-1",
 }
 
 led_map = {
-    (5, 120): 'Emis On',
-    (5, 0): '',
-    (7, 2): '',
+    (5, 120): "Emis On",
+    (5, 0): "",
+    (7, 2): "",
 }
 
 # The Degas/Emis On/mBar/Torr/Cal/Hyst indicators seem to each be
@@ -112,6 +112,7 @@ MASK_BOT = 0b01111000
 
 class Address(Enum):
     """Address codes for each MAX7219 register"""
+
     NoOp = 0x0
     Digit0 = 0x1
     Digit1 = 0x2
@@ -130,6 +131,7 @@ class Address(Enum):
 
 class MessagePacketizer(Packetizer):
     TERMINATOR = TERMINATOR
+
     def __init__(self, gauge):
         Packetizer.__init__(self)
         self.gauge = gauge
@@ -142,6 +144,7 @@ class MessagePacketizer(Packetizer):
 
 class LEDDriver(object):
     """A simple software implementation of a MAX7219"""
+
     def __init__(self):
         self.registers = {e: 0 for e in Address}
         self.decoders = {}
@@ -150,7 +153,7 @@ class LEDDriver(object):
         self.registers[Address(addr)] = data
 
     def digit(self, digit):
-        addr = Address(digit+1)
+        addr = Address(digit + 1)
         bitmask = 1 << digit
         mode = self.registers[Address.DecodeMode]
         reg_val = self.registers[addr]
@@ -170,8 +173,10 @@ class LEDDriver(object):
         try:
             digit = digit_map[reg_val & 0b01111111]
         except KeyError:
-            raise ValueError("Byte code 0b{:08b} does not exist in the digit_map decoder")
-        dot = '.' if (reg_val & 0b10000000) else ''
+            raise ValueError(
+                "Byte code 0b{:08b} does not exist in the digit_map decoder"
+            )
+        dot = "." if (reg_val & 0b10000000) else ""
         return digit + dot
 
 
@@ -184,7 +189,7 @@ class SenTorrMod(Instrument):
         self._driver_A.decoders[Address.Digit1] = LEDDriver.decode_digit
         self._driver_A.decoders[Address.Digit2] = sign_map.__getitem__
         self._driver_A.decoders[Address.Digit3] = LEDDriver.decode_digit
-        self._ser = Serial(self._paramset['port'], timeout=1.0)
+        self._ser = Serial(self._paramset["port"], timeout=1.0)
         self._thread = None
 
     def close(self):
@@ -224,9 +229,8 @@ class SenTorrMod(Instrument):
     def _burst_messages(buf):
         """Yields pairs of message tuples (addr, data) from a buffer"""
         for i in range(0, len(buf), 4):
-            addr_B, data_B, addr_A, data_A = struct.unpack_from('>BBBB', buf, i)
-            yield ((0x0F & addr_A, data_A),
-                   (0x0F & addr_B, data_B))
+            addr_B, data_B, addr_A, data_A = struct.unpack_from(">BBBB", buf, i)
+            yield ((0x0F & addr_A, data_A), (0x0F & addr_B, data_B))
 
     def _grab_packet(self):
         """Grab the bytes from the most recent burst packet"""
@@ -234,7 +238,7 @@ class SenTorrMod(Instrument):
         self._ser.write(MSG_GET_ONE)  # Poll the arduino
         msg = self._ser.read(264)
         if msg.endswith(TERMINATOR):
-            return msg[:-len(TERMINATOR)]
+            return msg[: -len(TERMINATOR)]
         raise Error("Received invalid message")
 
     def update(self):
@@ -255,19 +259,19 @@ class SenTorrMod(Instrument):
             units = self._units()
 
         try:
-            disp = ''.join(digits)
+            disp = "".join(digits)
         except TypeError:
             raise Error("Unknown digit values {}".format(digits))
 
-        if disp == '    ':
+        if disp == "    ":
             raise Error("Must update at least once before reading the pressure")
-        elif disp == '0F F':
+        elif disp == "0F F":
             raise Error("Ion gauge is off")
-        elif disp.endswith('E'):
+        elif disp.endswith("E"):
             raise Error(err_map[disp])
 
         try:
-            mag = float(digits[0] + digits[1] + 'e' + digits[2] + digits[3])
+            mag = float(digits[0] + digits[1] + "e" + digits[2] + digits[3])
             return mag * units
         except ValueError:
             raise Error("Unknown digit values {}".format(digits))
@@ -299,5 +303,9 @@ def list_instruments():
     # TODO: This just lists my one Arduino, but it'd be nice to have a better way of
     # IDing these if anyone else ever makes one.
     from serial.tools.list_ports import comports
-    return [ParamSet(SenTorrMod, port=p.device) for p in comports()
-            if (p.vid, p.pid, p.serial_number) == (0x2A03, 0x0043, '8553130333135141A141')]
+
+    return [
+        ParamSet(SenTorrMod, port=p.device)
+        for p in comports()
+        if (p.vid, p.pid, p.serial_number) == (0x2A03, 0x0043, "8553130333135141A141")
+    ]

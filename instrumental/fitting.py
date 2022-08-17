@@ -6,8 +6,19 @@ Module containing utilities related to fitting.
 Still very much a work in progress...
 """
 
-from numpy import (square, extract, diff, sign, logical_and,
-                   searchsorted, log, sum, exp, ma, pi)
+from numpy import (
+    square,
+    extract,
+    diff,
+    sign,
+    logical_and,
+    searchsorted,
+    log,
+    sum,
+    exp,
+    ma,
+    pi,
+)
 import scipy.optimize
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
@@ -35,9 +46,9 @@ def _ginput(*args, **kwargs):
     if MatplotlibDeprecationWarning is None:
         return plt.ginput(*args, **kwargs)
     else:
-        warnings.simplefilter('ignore', MatplotlibDeprecationWarning)
+        warnings.simplefilter("ignore", MatplotlibDeprecationWarning)
         out = plt.ginput(*args, **kwargs)
-        warnings.warn('default', MatplotlibDeprecationWarning)
+        warnings.warn("default", MatplotlibDeprecationWarning)
         return out
 
 
@@ -68,17 +79,18 @@ def curve_fit(f, xdata, ydata, p0=None, sigma=None, **kw):
     else:
         p0_mag = None
 
-    popt_mag, pcov_mag = scipy.optimize.curve_fit(f, xdata_mag, ydata_mag,
-                                                  p0_mag, **kw)
+    popt_mag, pcov_mag = scipy.optimize.curve_fit(f, xdata_mag, ydata_mag, p0_mag, **kw)
     popt = []
     pcov = []
     if p0:
         for _p0, _popt_mag, pcov_mag_row in zip(p0, popt_mag, pcov_mag):
             # Convert from base_unit magnitude back to the original units
-            popt.append( Q_(_popt_mag, _p0.to_base_units().units).to(_p0.units) )
+            popt.append(Q_(_popt_mag, _p0.to_base_units().units).to(_p0.units))
             pcov_row = []
             for _p0_2, _pcov_mag in zip(p0, pcov_mag_row):
-                pcov_row.append( Q_(_pcov_mag, (_p0*_p0_2).to_base_units().units).to(_p0*_p0_2) )
+                pcov_row.append(
+                    Q_(_pcov_mag, (_p0 * _p0_2).to_base_units().units).to(_p0 * _p0_2)
+                )
             pcov.append(pcov_row)
     else:
         popt = popt_mag
@@ -92,7 +104,7 @@ def lorentzian(x, A, x0, FWHM):
     Lorentzian curve. Takes an array ``x`` and returns an array
     :math:`\\frac{A}{1 + (\\frac{2(x-x0)}{FWHM})^2}`
     """
-    return A / (1 + square( 2*(x-x0)/FWHM ))
+    return A / (1 + square(2 * (x - x0) / FWHM))
 
 
 def triple_lorentzian(nu, A0, B0, FWHM, nu0, dnu, y0):
@@ -103,20 +115,20 @@ def triple_lorentzian(nu, A0, B0, FWHM, nu0, dnu, y0):
     + lorentzian(nu, B0, nu0+dnu, FWHM)``.
     """
     t1 = lorentzian(nu, A0, nu0, FWHM)
-    t2 = lorentzian(nu, B0, nu0-dnu, FWHM)
-    t3 = lorentzian(nu, B0, nu0+dnu, FWHM)
+    t2 = lorentzian(nu, B0, nu0 - dnu, FWHM)
+    t3 = lorentzian(nu, B0, nu0 + dnu, FWHM)
     return t1 + t2 + t3 + y0
 
 
 def _estimate_FWHM_pint(nu, amp, half_max, left_limit, center, right_limit):
-    """ Pint-friendly way to estimate FWHM. Doesn't use 'bad' numpy stuff"""
+    """Pint-friendly way to estimate FWHM. Doesn't use 'bad' numpy stuff"""
     left_sum, right_sum = 0 * u.MHz, 0 * u.MHz
     divisor = 0
     i = 0
     while nu[i] < left_limit:
         i += 1
     while nu[i] < center:
-        if amp[i-1] <= half_max and amp[i] > half_max:
+        if amp[i - 1] <= half_max and amp[i] > half_max:
             left_sum += nu[i]
             divisor += 1
         i += 1
@@ -124,7 +136,7 @@ def _estimate_FWHM_pint(nu, amp, half_max, left_limit, center, right_limit):
     divisor = 0
 
     while nu[i] < right_limit:
-        if amp[i-1] >= half_max and amp[i] < half_max:
+        if amp[i - 1] >= half_max and amp[i] < half_max:
             right_sum += nu[i]
             divisor += 1
         i += 1
@@ -134,11 +146,12 @@ def _estimate_FWHM_pint(nu, amp, half_max, left_limit, center, right_limit):
 
 def _estimate_FWHM(nu, amp, half_max, left_limit, center, right_limit):
     # Get x values of points where the data crosses half_max
-    all_points = extract(diff(sign(amp-half_max)), nu)
+    all_points = extract(diff(sign(amp - half_max)), nu)
 
     # Filter out the crossings from the sidebands
-    middle_points = extract(logical_and(left_limit < all_points, all_points < right_limit),
-                            all_points)
+    middle_points = extract(
+        logical_and(left_limit < all_points, all_points < right_limit), all_points
+    )
     center_index = searchsorted(middle_points, center)
     FWHM = middle_points[center_index:].mean() - middle_points[:center_index].mean()
     return FWHM
@@ -161,18 +174,18 @@ def _linear_fit_decay(x, y):
     y = y_masked.compressed()
 
     # Simply ignore every point after y goes <= 0
-#    try:
-#        last = where(y<=0)[0][0]
-#        x = x[:last]
-#        y = y[:last]
-#        plt.plot(x, y)
-#    except IndexError:
-#        # Do nothing if y never dips <= 0
-#        pass
+    #    try:
+    #        last = where(y<=0)[0][0]
+    #        x = x[:last]
+    #        y = y[:last]
+    #        plt.plot(x, y)
+    #    except IndexError:
+    #        # Do nothing if y never dips <= 0
+    #        pass
 
-    a_num = sum(x*x*y)*sum(y*log(y)) - sum(x*y)*sum(x*y*log(y))
-    b_num = sum(y)*sum(x*y*log(y)) - sum(x*y)*sum(y*log(y))
-    den = sum(y)*sum(x*x*y) - sum(x*y)**2
+    a_num = sum(x * x * y) * sum(y * log(y)) - sum(x * y) * sum(x * y * log(y))
+    b_num = sum(y) * sum(x * y * log(y)) - sum(x * y) * sum(y * log(y))
+    den = sum(y) * sum(x * x * y) - sum(x * y) ** 2
 
     a = a_num / den
     b = b_num / den
@@ -209,25 +222,27 @@ def guided_decay_fit(data_x, data_y):
     t = data_x - data_x[0]
 
     def decay(x, a, b, c):
-        return a*exp(b*x) + c
+        return a * exp(b * x) + c
 
     # Do linear fit to get initial parameter estimate
     a0, b0, c0 = _linear_fit_decay(t.magnitude, data_y.magnitude)
 
     # Do nonlinear fit
-    popt, pcov = curve_fit(decay, t.magnitude, data_y.magnitude, p0=[a0, b0, c0], maxfev=2000)
+    popt, pcov = curve_fit(
+        decay, t.magnitude, data_y.magnitude, p0=[a0, b0, c0], maxfev=2000
+    )
     a, b, c = popt
-    tau = Q_(-1/b, t.units)
-    fit = a * exp(-t/tau) + c
+    tau = Q_(-1 / b, t.units)
+    fit = a * exp(-t / tau) + c
     final = Q_(c, data_y.units)
 
-    t.ito('s')
-    plt.plot(t, fit, 'b-', lw=2, zorder=3)
-    plt.plot(t, data_y, 'gx')
-    plt.title('Decay fit')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Magnitude ({})'.format(data_y.units))
-    plt.legend(['Fitted Curve', 'Data Trace'])
+    t.ito("s")
+    plt.plot(t, fit, "b-", lw=2, zorder=3)
+    plt.plot(t, data_y, "gx")
+    plt.title("Decay fit")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Magnitude ({})".format(data_y.units))
+    plt.legend(["Fitted Curve", "Data Trace"])
     plt.show()
     return tau, final
 
@@ -263,26 +278,28 @@ def guided_ringdown_fit(data_x, data_y):
     amp = data_y / u.V
 
     def decay(x, a, b, c):
-        return a*exp(b*x) + c
+        return a * exp(b * x) + c
 
     # Do linear fit to get initial parameter estimate
-    a0, b0, c0 = _linear_fit_decay(t.magnitude, amp.to('').magnitude)
+    a0, b0, c0 = _linear_fit_decay(t.magnitude, amp.to("").magnitude)
 
     # Do nonlinear fit
-    popt, pcov = curve_fit(decay, t.magnitude, amp.magnitude, p0=[a0, b0, c0], maxfev=2000)
+    popt, pcov = curve_fit(
+        decay, t.magnitude, amp.magnitude, p0=[a0, b0, c0], maxfev=2000
+    )
     a, b, c = popt
-    tau = Q_(-1/b, t.units)
-    FWHM = (1 / (2*pi*tau)).to('MHz')
+    tau = Q_(-1 / b, t.units)
+    FWHM = (1 / (2 * pi * tau)).to("MHz")
 
-    fit = a * exp(-t/tau) + c
+    fit = a * exp(-t / tau) + c
 
-    t.ito('ns')
-    plt.plot(t, fit, 'b-', lw=2, zorder=3)
-    plt.plot(t, amp, 'gx')
-    plt.title('Ringdown fit')
-    plt.xlabel('Time (ns)')
-    plt.ylabel('Transmission (arb. units)')
-    plt.legend(['Fitted Curve', 'Data Trace'])
+    t.ito("ns")
+    plt.plot(t, fit, "b-", lw=2, zorder=3)
+    plt.plot(t, amp, "gx")
+    plt.title("Ringdown fit")
+    plt.xlabel("Time (ns)")
+    plt.ylabel("Transmission (arb. units)")
+    plt.legend(["Fitted Curve", "Data Trace"])
     plt.show()
     return FWHM
 
@@ -307,12 +324,12 @@ def guided_trace_fit(data_x, data_y, EOM_freq):
 
     # Have user mark the three maxima
     plt.plot(data_x, data_y)
-    plt.axis('tight')
+    plt.axis("tight")
     pts = _ginput(3)
     plt.close()
 
-    (x1, y1), (x2, y2), (x3, y3) = ((x*u.s, y*u.V) for (x, y) in pts)
-    scale_factor_x = 2*EOM_freq / (x3-x1)
+    (x1, y1), (x2, y2), (x3, y3) = ((x * u.s, y * u.V) for (x, y) in pts)
+    scale_factor_x = 2 * EOM_freq / (x3 - x1)
     scale_factor_y = 1 / u.V
 
     # Scale the data into frequency space
@@ -321,35 +338,34 @@ def guided_trace_fit(data_x, data_y, EOM_freq):
 
     # Calculate the initial estimated parameters
     A0 = y2 * scale_factor_y
-    B0 = (y1+y3)/2 * scale_factor_y
+    B0 = (y1 + y3) / 2 * scale_factor_y
     nu0 = x2 * scale_factor_x
     dnu = EOM_freq
     y0 = 0 * u.dimensionless
-    FWHM = _estimate_FWHM_pint(nu, amp, A0/2, nu0-dnu/2, nu0, nu0+dnu/2)
+    FWHM = _estimate_FWHM_pint(nu, amp, A0 / 2, nu0 - dnu / 2, nu0, nu0 + dnu / 2)
 
     # Do a curve fit to get new params
     popt, pcov = curve_fit(triple_lorentzian, nu, amp, p0=(A0, B0, FWHM, nu0, dnu, y0))
     A0, B0, FWHM, nu0, dnu, y0 = popt
 
     # Put params in format needed for param_plot
-    params = {
-        'A0': A0,
-        'B0': B0,
-        'FWHM': FWHM,
-        'nu0': nu0,
-        'dnu': dnu,
-        'y0': y0
-    }
+    params = {"A0": A0, "B0": B0, "FWHM": FWHM, "nu0": nu0, "dnu": dnu, "y0": y0}
 
     # Plot the data and fit on a param_plot
-    plt.plot(nu, amp, 'gx', nu, triple_lorentzian(nu, **params), 'b-', linewidth=2)
-    plt.xlim([(nu0-2*dnu).magnitude, (nu0+2*dnu).magnitude])
-    plt.title('Cavity Trace Fit')
-    plt.xlabel('Frequency (MHz)')
-    plt.ylabel('Transmission (arb. units)')
-    plt.legend(['Data Trace', 'Fitted Curve'])
-    plt.text(0, 1, 'FWHM = {:.2f}'.format(FWHM), ha='left', va='top',
-             transform=plt.gca().transAxes)
+    plt.plot(nu, amp, "gx", nu, triple_lorentzian(nu, **params), "b-", linewidth=2)
+    plt.xlim([(nu0 - 2 * dnu).magnitude, (nu0 + 2 * dnu).magnitude])
+    plt.title("Cavity Trace Fit")
+    plt.xlabel("Frequency (MHz)")
+    plt.ylabel("Transmission (arb. units)")
+    plt.legend(["Data Trace", "Fitted Curve"])
+    plt.text(
+        0,
+        1,
+        "FWHM = {:.2f}".format(FWHM),
+        ha="left",
+        va="top",
+        transform=plt.gca().transAxes,
+    )
     plt.show()
 
     return params

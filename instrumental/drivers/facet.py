@@ -15,18 +15,19 @@ from .util import to_quantity
 log = get_logger(__name__)
 
 
-ChangeEvent = namedtuple('ChangeEvent', ['name', 'old', 'new'])
+ChangeEvent = namedtuple("ChangeEvent", ["name", "old", "new"])
 
 
 class FacetGroup(object):
     """A collection of an instrument's FacetData objects"""
+
     def __init__(self, facet_data_list):
         for facet_data in facet_data_list:
             setattr(self, facet_data.facet.name, facet_data)
         self._names = [fd.facet.name for fd in facet_data_list]
 
     def __repr__(self):
-        return "<FacetGroup({})>".format(', '.join(name for name in self._names))
+        return "<FacetGroup({})>".format(", ".join(name for name in self._names))
 
     def __getitem__(self, key):
         if key not in self._names:
@@ -36,6 +37,7 @@ class FacetGroup(object):
 
 class FacetData(object):
     """Per-instance Facet data"""
+
     def __init__(self, parent_facet, owner):
         self.dirty = True
         self.cached_val = None
@@ -65,19 +67,25 @@ class FacetData(object):
         if self.facet.type == float:
             if self.facet.units:
                 from ..gui import UDoubleSpinBox
+
                 w = UDoubleSpinBox(parent, units=self.facet.units)
                 if self.cached_val is not None:
                     w.setUValue(self.cached_val)
+
                 def set_widget_value(event):
                     w.setUValue(event.new)
+
                 self.observe(set_widget_value)
                 w.uValueChanged.connect(self.set_value)
             else:
                 from ..gui import QDoubleSpinBox
+
                 w = QDoubleSpinBox(parent)
             return w
-        raise TypeError("Facet type '{}' is not associated with a widget "
-                        "type".format(self.facet.type))
+        raise TypeError(
+            "Facet type '{}' is not associated with a widget "
+            "type".format(self.facet.type)
+        )
 
 
 class Facet(object):
@@ -112,8 +120,19 @@ class Facet(object):
         raises a `ValueError` if a user tries to set a value that is out of range. `step`, if given,
         is used to round an in-range value before passing it to fset.
     """
-    def __init__(self, fget=None, fset=None, doc=None, cached=False, type=None, units=None,
-                 value=None, limits=None, name=None):
+
+    def __init__(
+        self,
+        fget=None,
+        fset=None,
+        doc=None,
+        cached=False,
+        type=None,
+        units=None,
+        value=None,
+        limits=None,
+        name=None,
+    ):
         if fget is not None:
             self.name = fget.__name__
 
@@ -137,7 +156,7 @@ class Facet(object):
         elif isinstance(value, Mapping):
             self.values = set(value)
             self.in_map = value
-            self.out_map = {v:k for k,v in value.items()}
+            self.out_map = {v: k for k, v in value.items()}
         else:
             self.values = set(value)
             self.in_map = None
@@ -149,8 +168,12 @@ class Facet(object):
     def _set_limits(self, limits):
         if limits is not None:
             for limit in limits:
-                if limit is not None and not isinstance(limit, (numbers.Number, basestring)):
-                    raise ValueError('Facet limits must be raw numbers, strings, or None')
+                if limit is not None and not isinstance(
+                    limit, (numbers.Number, basestring)
+                ):
+                    raise ValueError(
+                        "Facet limits must be raw numbers, strings, or None"
+                    )
 
         if limits is None:
             self.limits = (None, None, None)
@@ -176,7 +199,7 @@ class Facet(object):
         """Convert nice value to representation that fset takes"""
         if isinstance(value, Q_):
             value = value.magnitude
-        #if self.type is not None:
+        # if self.type is not None:
         #    value = self.type(value)
         if self.in_map:
             value = self.in_map[value]
@@ -207,13 +230,13 @@ class Facet(object):
         instance = self.instance(obj)
 
         if not (self.cacheable and use_cache) or instance.dirty:
-            log.debug('Getting value of facet %s', self.name)
+            log.debug("Getting value of facet %s", self.name)
             instance.cached_val = self.conv_get(self.fget(obj))
             instance.dirty = False
         else:
-            log.debug('Using cached value of facet %s', self.name)
+            log.debug("Using cached value of facet %s", self.name)
 
-        log.debug('Facet value was %s', instance.cached_val)
+        log.debug("Facet value was %s", instance.cached_val)
         return instance.cached_val
 
     def __set__(self, obj, qty):
@@ -232,24 +255,33 @@ class Facet(object):
         return self.check_limits(value, obj)
 
     def _load_limits(self, obj):
-        return tuple((getattr(obj, l) if isinstance(l, basestring) else l)
-                     for l in self.limits)
+        return tuple(
+            (getattr(obj, l) if isinstance(l, basestring) else l) for l in self.limits
+        )
 
     def check_limits(self, value, obj):
         """Check raw value (magnitude) against the Facet's limits"""
         start, stop, step = self._load_limits(obj)
         if start is not None and value < start:
-            raise ValueError("Value below lower limit of {}".format(
-                Q_(start, self.units) if self.units else start))
+            raise ValueError(
+                "Value below lower limit of {}".format(
+                    Q_(start, self.units) if self.units else start
+                )
+            )
         if stop is not None and value > stop:
-            raise ValueError("Value above upper limit of {}".format(
-                Q_(stop, self.units) if self.units else stop))
+            raise ValueError(
+                "Value above upper limit of {}".format(
+                    Q_(stop, self.units) if self.units else stop
+                )
+            )
 
         if step is not None:
             offset = value - start
             if offset % step != 0:
                 new_value = start + int(round(offset / step)) * step
-                log.debug("Coercing value from %s to %s due to limit step", value, new_value)
+                log.debug(
+                    "Coercing value from %s to %s due to limit step", value, new_value
+                )
                 return new_value
 
         return value
@@ -262,16 +294,16 @@ class Facet(object):
         value = self.convert_user_input(value, obj)
 
         if not (self.cacheable and use_cache) or instance.cached_val != value:
-            log.info('Setting value of facet %s', self.name)
+            log.info("Setting value of facet %s", self.name)
             self.fset(obj, self.conv_set(value))
             change = ChangeEvent(name=self.name, old=instance.cached_val, new=value)
             for callback in instance.observers:
                 callback(change)
         else:
-            log.info('Skipping set of facet %s, cached value matches', self.name)
+            log.info("Skipping set of facet %s, cached value matches", self.name)
 
         instance.cached_val = value
-        log.info('Facet value is %s', value)
+        log.info("Facet value is %s", value)
 
     def __call__(self, fget):
         return self.getter(fget)
@@ -294,10 +326,29 @@ class AbstractFacet(Facet):
 
 
 class ManualFacet(Facet):
-    def __init__(self, doc=None, cached=False, type=None, units=None, value=None, limits=None,
-                 name=None, save_on_set=True):
-        Facet.__init__(self, self._manual_fget, self._manual_fset, doc=doc, cached=cached,
-                       type=type, units=units, value=value, limits=limits, name=name)
+    def __init__(
+        self,
+        doc=None,
+        cached=False,
+        type=None,
+        units=None,
+        value=None,
+        limits=None,
+        name=None,
+        save_on_set=True,
+    ):
+        Facet.__init__(
+            self,
+            self._manual_fget,
+            self._manual_fset,
+            doc=doc,
+            cached=cached,
+            type=type,
+            units=units,
+            value=value,
+            limits=limits,
+            name=name,
+        )
         self.save_on_set = save_on_set
 
     def _manual_fget(self, owner):
@@ -309,7 +360,7 @@ class ManualFacet(Facet):
 
     def _manual_fset(self, owner, value):
         self.instance(owner)._manual_value = value
-        if self.save_on_set and getattr(owner, '_alias', None):
+        if self.save_on_set and getattr(owner, "_alias", None):
             owner._save_state()  # Will raise exception if _alias undefined
 
     def _default_value(self):
@@ -345,18 +396,24 @@ def MessageFacet(get_msg=None, set_msg=None, convert=None, **kwds):
     if get_msg is None:
         fget = None
     elif convert:
+
         def fget(obj):
             return convert(obj.query(get_msg))
+
     else:
+
         def fget(obj):
             return obj.query(get_msg)
 
     if set_msg is None:
         fset = None
     elif convert:
+
         def fset(obj, value):
             obj.write(set_msg.format(convert(value)))
+
     else:
+
         def fset(obj, value):
             obj.write(set_msg.format(value))
 
@@ -380,6 +437,6 @@ def SCPI_Facet(msg, convert=None, readonly=False, **kwds):
     **kwds :
         Any other keywords are passed along to the `Facet` constructor
     """
-    get_msg = msg + '?'
-    set_msg = None if readonly else msg + ' {}'
+    get_msg = msg + "?"
+    set_msg = None if readonly else msg + " {}"
     return MessageFacet(get_msg, set_msg, convert=convert, **kwds)

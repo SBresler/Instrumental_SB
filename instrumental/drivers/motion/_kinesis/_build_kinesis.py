@@ -16,13 +16,13 @@ libs = [
     "Thorlabs.MotionControl.Benchtop.Piezo",  # PZ, PBC
     "Thorlabs.MotionControl.Benchtop.PrecisionPiezo",  # PPC, PPC2
     "Thorlabs.MotionControl.Benchtop.StepperMotor",
-    #"Thorlabs.MotionControl.Controls",
-    #"Thorlabs.MotionControl.DataLogger",
-    #"Thorlabs.MotionControl.DeviceManager",
+    # "Thorlabs.MotionControl.Controls",
+    # "Thorlabs.MotionControl.DataLogger",
+    # "Thorlabs.MotionControl.DeviceManager",
     "Thorlabs.MotionControl.FilterFlipper",
-    #"Thorlabs.MotionControl.FTD2xx_Net",
+    # "Thorlabs.MotionControl.FTD2xx_Net",
     "Thorlabs.MotionControl.IntegratedStepperMotors",
-    #"Thorlabs.MotionControl.Joystick",
+    # "Thorlabs.MotionControl.Joystick",
     "Thorlabs.MotionControl.KCube.BrushlessMotor",
     "Thorlabs.MotionControl.KCube.DCServo",
     "Thorlabs.MotionControl.KCube.InertialMotor",
@@ -47,27 +47,28 @@ libs = [
     "Thorlabs.MotionControl.TCube.StrainGauge",
     "Thorlabs.MotionControl.TCube.TEC",
     "Thorlabs.MotionControl.TDIEngine",
-    #"Thorlabs.MotionControl.Tools.Common",
-    #"Thorlabs.MotionControl.Tools.Logging",
-    #"Thorlabs.MotionControl.Tools.WPF",
+    # "Thorlabs.MotionControl.Tools.Common",
+    # "Thorlabs.MotionControl.Tools.Logging",
+    # "Thorlabs.MotionControl.Tools.WPF",
     "Thorlabs.MotionControl.VerticalStage",
 ]
 
 
 def make_info(lib_name):
     header_info = {
-        'win*': {
-            'path': (
+        "win*": {
+            "path": (
                 r"{PROGRAMFILES}\Thorlabs\Kinesis",
                 r"{PROGRAMFILES(X86)}\Thorlabs\Kinesis",
             ),
-            'header': '{}.h'.format(lib_name)
+            "header": "{}.h".format(lib_name),
         },
     }
 
-    lib_names = {'win*': '{}.dll'.format(lib_name)}
+    lib_names = {"win*": "{}.dll".format(lib_name)}
 
     return header_info, lib_names
+
 
 common_preamble = """
 typedef unsigned char byte;
@@ -149,50 +150,65 @@ void __cdecl TLI_UninitializeSimulations(void);
 
 
 def ref_hook(tokens):
-    return modify_pattern(tokens, [('k', 'int64_t'), ('d', '&'), ('a', '*'),
-                                   ('k', 'lastUpdateTimeMS')])
+    return modify_pattern(
+        tokens, [("k", "int64_t"), ("d", "&"), ("a", "*"), ("k", "lastUpdateTimeMS")]
+    )
 
 
 def scc_hook(tokens):
     """Fixes a (seeming) typo in the ISC header"""
     for token in tokens:
-        if token.string == 'SCC_RequestJogParams':
-            token.string = 'ISC_RequestJogParams'
+        if token.string == "SCC_RequestJogParams":
+            token.string = "ISC_RequestJogParams"
         yield token
 
 
 def build(shortname, sublib):
-    ll_module_name = '_{}_lib'.format(shortname)
+    ll_module_name = "_{}_lib".format(shortname)
     header_info, lib_names = make_info(sublib)
     preamble = common_preamble
 
     # Common DeviceManager library, which doesn't have a header
-    if shortname == 'tli':
+    if shortname == "tli":
         header_info = None
         preamble += tli_header_src
 
-    build_lib(header_info, lib_names, ll_module_name, __file__, ignore_system_headers=True,
-              preamble=preamble, hook_groups='C++', token_hooks=(scc_hook))
+    build_lib(
+        header_info,
+        lib_names,
+        ll_module_name,
+        __file__,
+        ignore_system_headers=True,
+        preamble=preamble,
+        hook_groups="C++",
+        token_hooks=(scc_hook),
+    )
 
 
 def build_all():
     import os.path
     from nicelib.util import handle_header_path
     from nicelib.process import process_headers
+
     filedir = os.path.dirname(os.path.abspath(__file__))
     prefixes = {}
     funcs = set()
 
     for sublib in libs:
-        print('Finding {}...'.format(sublib))
+        print("Finding {}...".format(sublib))
         header_info, lib_names = make_info(sublib)
         header_paths, predef_path = handle_header_path(header_info, filedir)
-        ret = process_headers(header_paths, predef_path, ignore_system_headers=True,
-                              preamble=common_preamble, hook_groups='C++',
-                              token_hooks=(ref_hook, scc_hook))
+        ret = process_headers(
+            header_paths,
+            predef_path,
+            ignore_system_headers=True,
+            preamble=common_preamble,
+            hook_groups="C++",
+            token_hooks=(ref_hook, scc_hook),
+        )
         _, defs, argnames = ret
-        prefixes[sublib] = set(n.split('_')[0] for n in argnames)
+        prefixes[sublib] = set(n.split("_")[0] for n in argnames)
         for funcname in argnames:
-            funcs.add(funcname.split('_', 1)[-1])
+            funcs.add(funcname.split("_", 1)[-1])
 
     return prefixes, funcs

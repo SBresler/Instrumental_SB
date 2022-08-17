@@ -4,8 +4,15 @@
 A very simple GUI that uses a CameraView to view live video from a camera.
 """
 import sys
-from qtpy.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QPushButton,
-                            QVBoxLayout, QHBoxLayout)
+from qtpy.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QScrollArea,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+)
 from instrumental import instrument, gui
 
 
@@ -41,8 +48,8 @@ def create_window():
     return app, win, button, btn_grab, scroll_area
 
 
-if __name__ == '__main__':
-    cam = instrument('pxCam')  # Replace with your camera's alias
+if __name__ == "__main__":
+    cam = instrument("pxCam")  # Replace with your camera's alias
 
     with cam:
         app, win, ssbutton, btn_grab, scroll_area = create_window()
@@ -50,6 +57,7 @@ if __name__ == '__main__':
         scroll_area.setWidget(camview)
 
         ssbutton.running = False
+
         def start_stop():
             if not ssbutton.running:
                 camview.start_video()
@@ -59,11 +67,13 @@ if __name__ == '__main__':
                 camview.stop_video()
                 ssbutton.setText("Start Video")
                 ssbutton.running = False
+
         ssbutton.clicked.connect(start_stop)
 
         def grab():
             if not ssbutton.running:
                 camview.grab_image()
+
         btn_grab.clicked.connect(grab)
 
         win.show()

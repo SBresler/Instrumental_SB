@@ -18,8 +18,8 @@ from ... import u
 
 log = get_logger(__name__)
 
-_INST_PARAMS = ['serial', 'number']
-_INST_CLASSES = ['TSI_Camera']
+_INST_PARAMS = ["serial", "number"]
+_INST_CLASSES = ["TSI_Camera"]
 
 if PY2:
     memoryview = buffer  # Needed b/c np.frombuffer is broken on memoryviews in PY2
@@ -29,9 +29,10 @@ else:
 
 ffi = FFI()
 mod_dir, _ = os.path.split(__file__)
-with open(os.path.join(mod_dir, '_tsi', 'tsi.h')) as f:
+with open(os.path.join(mod_dir, "_tsi", "tsi.h")) as f:
     ffi.cdef(f.read())
-ffi.cdef("""
+ffi.cdef(
+    """
     #define WAIT_OBJECT_0       0x00L
     #define WAIT_ABANDONED      0x80L
     #define WAIT_TIMEOUT        0x102L
@@ -39,81 +40,82 @@ ffi.cdef("""
     #define INFINITE            0xFFFFFFFF
     DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
     BOOL ResetEvent(HANDLE hEvent);
-""")
-lib = ffi.dlopen('tsi_sdk')
-winlib = ffi.dlopen('Kernel32.dll')
+"""
+)
+lib = ffi.dlopen("tsi_sdk")
+winlib = ffi.dlopen("Kernel32.dll")
 
 param_type = {
-    lib.TSI_PARAM_ATTR: 'uint8_t*',
-    lib.TSI_PARAM_PROTOCOL: 'uint32_t*',
-    lib.TSI_PARAM_FW_VER: 'char[64]',
-    lib.TSI_PARAM_HW_VER: 'char[64]',
-    lib.TSI_PARAM_HW_MODEL: 'char[64]',
-    lib.TSI_PARAM_HW_SER_NUM: 'char[64]',
-    lib.TSI_PARAM_CAMSTATE: 'uint32_t*',
+    lib.TSI_PARAM_ATTR: "uint8_t*",
+    lib.TSI_PARAM_PROTOCOL: "uint32_t*",
+    lib.TSI_PARAM_FW_VER: "char[64]",
+    lib.TSI_PARAM_HW_VER: "char[64]",
+    lib.TSI_PARAM_HW_MODEL: "char[64]",
+    lib.TSI_PARAM_HW_SER_NUM: "char[64]",
+    lib.TSI_PARAM_CAMSTATE: "uint32_t*",
     lib.TSI_PARAM_CAM_EXPOSURE_STATE: None,
-    lib.TSI_PARAM_CAM_TRIGGER_STATE: 'uint32_t*',
-    lib.TSI_PARAM_EXPOSURE_UNIT: 'TSI_EXPOSURE_UNITS*',
-    lib.TSI_PARAM_EXPOSURE_TIME: 'uint32_t*',
-    lib.TSI_PARAM_ACTUAL_EXPOSURE_TIME: 'uint32_t*',
-    lib.TSI_PARAM_FRAME_TIME: 'float*',
-    lib.TSI_PARAM_VSIZE: 'uint32_t*',
-    lib.TSI_PARAM_HSIZE: 'uint32_t*',
-    lib.TSI_PARAM_ROI_BIN: 'TSI_ROI_BIN*',
-    lib.TSI_PARAM_FRAME_COUNT: 'uint32_t*',
-    lib.TSI_PARAM_CURRENT_FRAME: 'uint32_t*',
-    lib.TSI_PARAM_OP_MODE: 'TSI_OP_MODE*',
-    lib.TSI_PARAM_CDS_GAIN: 'uint32_t*',
-    lib.TSI_PARAM_VGA_GAIN: 'uint32_t*',
-    lib.TSI_PARAM_GAIN: 'uint32_t*',
-    lib.TSI_PARAM_OPTICAL_BLACK_LEVEL: 'uint32_t*',
-    lib.TSI_PARAM_PIXEL_OFFSET: 'uint32_t*',
-    lib.TSI_PARAM_READOUT_SPEED_INDEX: 'uint32_t*',
-    lib.TSI_PARAM_READOUT_SPEED: 'uint32_t*',
-    lib.TSI_PARAM_FRAME_RATE: 'float*',
-    lib.TSI_PARAM_COOLING_MODE: 'uint32_t*',
-    lib.TSI_PARAM_COOLING_SETPOINT: 'int32_t*',
-    lib.TSI_PARAM_TEMPERATURE: 'int32_t*',
-    lib.TSI_PARAM_QX_OPTION_MODE: 'uint32_t*',
-    lib.TSI_PARAM_TURBO_CODE_MODE: 'uint32_t*',
-    lib.TSI_PARAM_XORIGIN: 'uint32_t*',
-    lib.TSI_PARAM_YORIGIN: 'uint32_t*',
-    lib.TSI_PARAM_XPIXELS: 'uint32_t*',
-    lib.TSI_PARAM_YPIXELS: 'uint32_t*',
-    lib.TSI_PARAM_XBIN: 'uint32_t*',
-    lib.TSI_PARAM_YBIN: 'uint32_t*',
-    #lib.TSI_PARAM_IMAGE_ACQUISTION_MODE: 'uint32_t*',
-    lib.TSI_PARAM_NAMED_VALUE: 'char[128]',
-    lib.TSI_PARAM_TAPS_INDEX: 'uint32_t*',
-    lib.TSI_PARAM_TAPS_VALUE: 'uint32_t*',
-    #lib.TSI_PARAM_RESERVED_1: None,
-    #lib.TSI_PARAM_RESERVED_2: None,
-    #lib.TSI_PARAM_RESERVED_3: None,
-    #lib.TSI_PARAM_RESERVED_4: None,
-    lib.TSI_PARAM_GLOBAL_CAMERA_NAME: 'char[64]',
-    lib.TSI_PARAM_CDS_GAIN_VALUE: 'uint32_t*',
-    lib.TSI_PARAM_PIXEL_SIZE: 'float*',
-    lib.TSI_PARAM_READOUT_TIME: 'float*',
-    lib.TSI_PARAM_HW_TRIGGER_ACTIVE: 'uint32_t*',
-    lib.TSI_PARAM_HW_TRIG_SOURCE: 'TSI_HW_TRIG_SOURCE*',
-    lib.TSI_PARAM_HW_TRIG_POLARITY: 'TSI_HW_TRIG_POLARITY*',
-    lib.TSI_PARAM_TAP_BALANCE_ENABLE: 'uint32_t*',
-    lib.TSI_PARAM_DROPPED_FRAMES: 'uint32_t*',
-    lib.TSI_PARAM_EXPOSURE_TIME_US: 'uint32_t*',
-    #lib.TSI_PARAM_RESERVED_5: None,
-    #lib.TSI_PARAM_RESERVED_6: None,
-    #lib.TSI_PARAM_RESERVED_7: None,
-    lib.TSI_PARAM_UPDATE_PARAMETERS: 'uint32_t*',
-    #lib.TSI_PARAM_FEATURE_LIST: None,
-    #lib.TSI_PARAM_FEATURE_VALID: None,
-    lib.TSI_PARAM_NUM_IMAGE_BUFFERS: 'int32_t*',
-    lib.TSI_PARAM_COLOR_FILTER_TYPE: 'char[32]',
-    #lib.TSI_PARAM_COLOR_FILTER_PHASE: '',
-    #lib.TSI_PARAM_IR_FILTER_TYPE: '',
-    #lib.TSI_PARAM_COLOR_CAMERA_CORRECTION_MATRIX: None,
-    #lib.TSI_PARAM_CCM_OUTPUT_COLOR_SPACE: None,
-    #lib.TSI_PARAM_DEFAULT_WHITE_BALANCE_MATRIX: None,
-    lib.TSI_PARAM_USB_ENABLE_LED: 'uint32_t*',
+    lib.TSI_PARAM_CAM_TRIGGER_STATE: "uint32_t*",
+    lib.TSI_PARAM_EXPOSURE_UNIT: "TSI_EXPOSURE_UNITS*",
+    lib.TSI_PARAM_EXPOSURE_TIME: "uint32_t*",
+    lib.TSI_PARAM_ACTUAL_EXPOSURE_TIME: "uint32_t*",
+    lib.TSI_PARAM_FRAME_TIME: "float*",
+    lib.TSI_PARAM_VSIZE: "uint32_t*",
+    lib.TSI_PARAM_HSIZE: "uint32_t*",
+    lib.TSI_PARAM_ROI_BIN: "TSI_ROI_BIN*",
+    lib.TSI_PARAM_FRAME_COUNT: "uint32_t*",
+    lib.TSI_PARAM_CURRENT_FRAME: "uint32_t*",
+    lib.TSI_PARAM_OP_MODE: "TSI_OP_MODE*",
+    lib.TSI_PARAM_CDS_GAIN: "uint32_t*",
+    lib.TSI_PARAM_VGA_GAIN: "uint32_t*",
+    lib.TSI_PARAM_GAIN: "uint32_t*",
+    lib.TSI_PARAM_OPTICAL_BLACK_LEVEL: "uint32_t*",
+    lib.TSI_PARAM_PIXEL_OFFSET: "uint32_t*",
+    lib.TSI_PARAM_READOUT_SPEED_INDEX: "uint32_t*",
+    lib.TSI_PARAM_READOUT_SPEED: "uint32_t*",
+    lib.TSI_PARAM_FRAME_RATE: "float*",
+    lib.TSI_PARAM_COOLING_MODE: "uint32_t*",
+    lib.TSI_PARAM_COOLING_SETPOINT: "int32_t*",
+    lib.TSI_PARAM_TEMPERATURE: "int32_t*",
+    lib.TSI_PARAM_QX_OPTION_MODE: "uint32_t*",
+    lib.TSI_PARAM_TURBO_CODE_MODE: "uint32_t*",
+    lib.TSI_PARAM_XORIGIN: "uint32_t*",
+    lib.TSI_PARAM_YORIGIN: "uint32_t*",
+    lib.TSI_PARAM_XPIXELS: "uint32_t*",
+    lib.TSI_PARAM_YPIXELS: "uint32_t*",
+    lib.TSI_PARAM_XBIN: "uint32_t*",
+    lib.TSI_PARAM_YBIN: "uint32_t*",
+    # lib.TSI_PARAM_IMAGE_ACQUISTION_MODE: 'uint32_t*',
+    lib.TSI_PARAM_NAMED_VALUE: "char[128]",
+    lib.TSI_PARAM_TAPS_INDEX: "uint32_t*",
+    lib.TSI_PARAM_TAPS_VALUE: "uint32_t*",
+    # lib.TSI_PARAM_RESERVED_1: None,
+    # lib.TSI_PARAM_RESERVED_2: None,
+    # lib.TSI_PARAM_RESERVED_3: None,
+    # lib.TSI_PARAM_RESERVED_4: None,
+    lib.TSI_PARAM_GLOBAL_CAMERA_NAME: "char[64]",
+    lib.TSI_PARAM_CDS_GAIN_VALUE: "uint32_t*",
+    lib.TSI_PARAM_PIXEL_SIZE: "float*",
+    lib.TSI_PARAM_READOUT_TIME: "float*",
+    lib.TSI_PARAM_HW_TRIGGER_ACTIVE: "uint32_t*",
+    lib.TSI_PARAM_HW_TRIG_SOURCE: "TSI_HW_TRIG_SOURCE*",
+    lib.TSI_PARAM_HW_TRIG_POLARITY: "TSI_HW_TRIG_POLARITY*",
+    lib.TSI_PARAM_TAP_BALANCE_ENABLE: "uint32_t*",
+    lib.TSI_PARAM_DROPPED_FRAMES: "uint32_t*",
+    lib.TSI_PARAM_EXPOSURE_TIME_US: "uint32_t*",
+    # lib.TSI_PARAM_RESERVED_5: None,
+    # lib.TSI_PARAM_RESERVED_6: None,
+    # lib.TSI_PARAM_RESERVED_7: None,
+    lib.TSI_PARAM_UPDATE_PARAMETERS: "uint32_t*",
+    # lib.TSI_PARAM_FEATURE_LIST: None,
+    # lib.TSI_PARAM_FEATURE_VALID: None,
+    lib.TSI_PARAM_NUM_IMAGE_BUFFERS: "int32_t*",
+    lib.TSI_PARAM_COLOR_FILTER_TYPE: "char[32]",
+    # lib.TSI_PARAM_COLOR_FILTER_PHASE: '',
+    # lib.TSI_PARAM_IR_FILTER_TYPE: '',
+    # lib.TSI_PARAM_COLOR_CAMERA_CORRECTION_MATRIX: None,
+    # lib.TSI_PARAM_CCM_OUTPUT_COLOR_SPACE: None,
+    # lib.TSI_PARAM_DEFAULT_WHITE_BALANCE_MATRIX: None,
+    lib.TSI_PARAM_USB_ENABLE_LED: "uint32_t*",
 }
 
 
@@ -122,34 +124,38 @@ def from_enum(item):
 
 
 def _strip_prefix(value, prefix):
-    return value[len(prefix):] if value.startswith(prefix) else value
+    return value[len(prefix) :] if value.startswith(prefix) else value
 
 
 enum_map = {}
 
 
-if 'sphinx' in sys.modules:
+if "sphinx" in sys.modules:
+
     class make_enum(object):
         def __init__(self, *args):
             pass
+
         def __getattr__(self, name):
             return name
+
 else:
-    def make_enum(name, c_name, prefix=''):
+
+    def make_enum(name, c_name, prefix=""):
         ctype = ffi.typeof(c_name)
-        d = {_strip_prefix(v, prefix):k for k,v in ctype.elements.items()}
+        d = {_strip_prefix(v, prefix): k for k, v in ctype.elements.items()}
         new_enum = Enum(name, d)
         enum_map[c_name] = new_enum
         return new_enum
 
 
-Param = make_enum('Param', 'TSI_PARAM_ID', 'TSI_PARAM_')
-ExpUnit = make_enum('ExpUnit', 'TSI_EXPOSURE_UNITS', 'TSI_EXP_UNIT_')
-Status = make_enum('Status', 'TSI_CAMERA_STATUS', 'TSI_STATUS_')
-AcqStatus = make_enum('AcqStatus', 'TSI_ACQ_STATUS_ID', 'TSI_ACQ_STATUS_')
-TrigSource = make_enum('TrigSource', 'TSI_HW_TRIG_SOURCE', 'TSI_HW_TRIG_')
-TrigPol = make_enum('TrigPol', 'TSI_HW_TRIG_POLARITY', 'TSI_HW_TRIG_')
-OpMode = make_enum('OpMode', 'TSI_OP_MODE', 'TSI_OP_MODE_')
+Param = make_enum("Param", "TSI_PARAM_ID", "TSI_PARAM_")
+ExpUnit = make_enum("ExpUnit", "TSI_EXPOSURE_UNITS", "TSI_EXP_UNIT_")
+Status = make_enum("Status", "TSI_CAMERA_STATUS", "TSI_STATUS_")
+AcqStatus = make_enum("AcqStatus", "TSI_ACQ_STATUS_ID", "TSI_ACQ_STATUS_")
+TrigSource = make_enum("TrigSource", "TSI_HW_TRIG_SOURCE", "TSI_HW_TRIG_")
+TrigPol = make_enum("TrigPol", "TSI_HW_TRIG_POLARITY", "TSI_HW_TRIG_")
+OpMode = make_enum("OpMode", "TSI_OP_MODE", "TSI_OP_MODE_")
 
 
 class TSI_DLL_SDK(object):
@@ -174,32 +180,42 @@ class TSI_DLL_SDK(object):
     def GetCamera(self, camera_number):
         cam_ptr = self._ll.vptr.GetCamera(self._ll, camera_number)
         if cam_ptr == ffi.NULL:
-            raise Error("Camera not found. Make sure you called GetNumberOfCameras first")
+            raise Error(
+                "Camera not found. Make sure you called GetNumberOfCameras first"
+            )
         return TSI_DLL_Camera(cam_ptr)
 
     def GetCameraInterfaceTypeStr(self, camera_number):
         ret = self._ll.vptr.GetCameraInterfaceTypeStr(self._ll, camera_number)
         if ret == ffi.NULL:
-            raise Error("Camera not found. Make sure you called GetNumberOfCameras first")
+            raise Error(
+                "Camera not found. Make sure you called GetNumberOfCameras first"
+            )
         return ffi.string(ret)
 
     def GetCameraAddressStr(self, camera_number, address_select):
         ret = self._ll.vptr.GetCameraAddressStr(self._ll, camera_number, address_select)
         if ret == ffi.NULL:
-            raise Error("Camera not found, or invalid address_select value for this camera. "
-                        "Make sure you called GetNumberOfCameras first")
+            raise Error(
+                "Camera not found, or invalid address_select value for this camera. "
+                "Make sure you called GetNumberOfCameras first"
+            )
         return ffi.string(ret)
 
     def GetCameraName(self, camera_number):
         ret = self._ll.vptr.GetCameraName(self._ll, camera_number)
         if ret == ffi.NULL:
-            raise Error("Camera not found. Make sure you called GetNumberOfCameras first")
+            raise Error(
+                "Camera not found. Make sure you called GetNumberOfCameras first"
+            )
         return ffi.string(ret)
 
     def GetCameraSerialNumStr(self, camera_number):
         ret = self._ll.vptr.GetCameraSerialNumStr(self._ll, camera_number)
         if ret == ffi.NULL:
-            raise Error("Camera not found. Make sure you called GetNumberOfCameras first")
+            raise Error(
+                "Camera not found. Make sure you called GetNumberOfCameras first"
+            )
         return ffi.string(ret)
 
 
@@ -224,7 +240,7 @@ class TSI_DLL_Camera(object):
             raise Exception("Closing camera failed")
 
     def Status(self):
-        p_status = ffi.new('TSI_CAMERA_STATUS*')
+        p_status = ffi.new("TSI_CAMERA_STATUS*")
         success = self._ll.vptr.Status(self._ll, p_status)
         if not success:
             raise Exception("Failed to get camera status")
@@ -242,16 +258,17 @@ class TSI_DLL_Camera(object):
         return self._ll.vptr.GetDataTypeSize(self._ll, data_type)
 
     def _param_data_type(self, param_id):
-        p_data = ffi.new('TSI_DATA_TYPE*')
-        self._ll.vptr.GetParameter(self._ll, lib.TSI_ATTR_DATA_TYPE, ffi.sizeof('TSI_DATA_TYPE'),
-                                   p_data)
+        p_data = ffi.new("TSI_DATA_TYPE*")
+        self._ll.vptr.GetParameter(
+            self._ll, lib.TSI_ATTR_DATA_TYPE, ffi.sizeof("TSI_DATA_TYPE"), p_data
+        )
         return p_data[0]
 
     def GetParameter(self, param_id):
         param_id = from_enum(param_id)
         ctype = ffi.typeof(param_type[param_id])
 
-        if ctype.kind == 'pointer':
+        if ctype.kind == "pointer":
             size = ffi.sizeof(ctype.item)
         else:
             size = ffi.sizeof(ctype)
@@ -261,9 +278,9 @@ class TSI_DLL_Camera(object):
         if not success:
             raise Exception("Failed to get camera parameter")
 
-        if param_type[param_id].startswith('char'):
+        if param_type[param_id].startswith("char"):
             return ffi.string(p_data)
-        elif ctype.kind == 'enum':
+        elif ctype.kind == "enum":
             return enum_map[ctype.cname](p_data[0])
         else:
             return p_data[0]
@@ -273,7 +290,7 @@ class TSI_DLL_Camera(object):
         data = from_enum(data)
 
         ctype = ffi.typeof(param_type[param_id])
-        if ctype.kind == 'array':
+        if ctype.kind == "array":
             p_data = data
         else:
             p_data = ffi.new(ctype, data)
@@ -294,8 +311,10 @@ class TSI_DLL_Camera(object):
     def StartAndWait(self, timeout_ms):
         ok = self._ll.vptr.StartAndWait(self._ll, timeout_ms)
         if not ok:
-            raise Exception("Failed to start capture. Current camera parameters do not permit "
-                            "operation of the camera.")
+            raise Exception(
+                "Failed to start capture. Current camera parameters do not permit "
+                "operation of the camera."
+            )
 
     def Start(self):
         ok = self._ll.vptr.Start(self._ll)
@@ -332,8 +351,8 @@ class TSI_DLL_Camera(object):
             raise Exception("Failed to clear error")
 
     def GetErrorStr(self, code):
-        ptr_size = ffi.new('int*', 256)
-        buf = ffi.new('char[]', ptr_size[0])
+        ptr_size = ffi.new("int*", 256)
+        buf = ffi.new("char[]", ptr_size[0])
         ok = self._ll.vptr.GetErrorStr(self._ll, code, buf, ptr_size)
         if not ok:
             raise Exception("Failed to get error string")
@@ -360,12 +379,13 @@ def _rw_property(param):
 def _ro_property(param):
     def fget(self):
         return self._get_parameter(param)
+
     return property(fget)
 
 
 class TSI_Camera(Camera):
     DEFAULT_KWDS = Camera.DEFAULT_KWDS.copy()
-    DEFAULT_KWDS.update(trig='auto', rising=True)
+    DEFAULT_KWDS.update(trig="auto", rising=True)
 
     class TriggerMode(Enum):
         auto = OpMode.NORMAL
@@ -385,7 +405,7 @@ class TSI_Camera(Camera):
         self._next_frame_idx = 0
         self._tot_frames = None  # Zero means 'infinite' capture
         self._trig_mode = None
-        self._dev = sdk.GetCamera(self._paramset.get('number', 0))
+        self._dev = sdk.GetCamera(self._paramset.get("number", 0))
 
         if self._dev.Status() != Status.CLOSED:
             raise Error("Camera is already open")
@@ -394,7 +414,7 @@ class TSI_Camera(Camera):
         self._set_parameter(Param.EXPOSURE_UNIT, ExpUnit.MILLISECONDS)
 
     def close(self):
-        log.info('Closing TSI camera...')
+        log.info("Closing TSI camera...")
         self._dev.Stop()
         self._dev.Close()
 
@@ -404,9 +424,9 @@ class TSI_Camera(Camera):
     def _set_parameter(self, param_id, data):
         self._dev.SetParameter(param_id, data)
 
-    @check_units(exp_time='ms')
+    @check_units(exp_time="ms")
     def _set_exposure_time(self, exp_time):
-        time_ms = int(exp_time.m_as('ms'))
+        time_ms = int(exp_time.m_as("ms"))
         self._set_parameter(Param.EXPOSURE_TIME, time_ms)
 
     def _get_exposure_time(self):
@@ -414,12 +434,12 @@ class TSI_Camera(Camera):
 
     def _set_ROI(self, params):
         roi_data = {
-            'XOrigin': int(params['left']),
-            'YOrigin': int(params['top']),
-            'XPixels': int(params['right'] - params['left']),
-            'YPixels': int(params['bot'] - params['top']),
-            'XBin': int(params['hbin']),
-            'YBin': int(params['vbin']),
+            "XOrigin": int(params["left"]),
+            "YOrigin": int(params["top"]),
+            "XPixels": int(params["right"] - params["left"]),
+            "YPixels": int(params["bot"] - params["top"]),
+            "XBin": int(params["hbin"]),
+            "YBin": int(params["vbin"]),
         }
         self._set_parameter(Param.ROI_BIN, roi_data)
 
@@ -432,7 +452,7 @@ class TSI_Camera(Camera):
             n_frames = 1
         self._set_parameter(Param.FRAME_COUNT, n_frames)
 
-    def grab_image(self, timeout='1s', copy=True, **kwds):
+    def grab_image(self, timeout="1s", copy=True, **kwds):
         self.start_capture(**kwds)
         try:
             images = self.get_captured_image(timeout=timeout, copy=copy, **kwds)
@@ -444,8 +464,8 @@ class TSI_Camera(Camera):
         """Cancel a capture sequence, cleaning up and stopping the camera"""
         self._dev.Stop()
 
-    @check_units(timeout='?ms')
-    def get_captured_image(self, timeout='1s', copy=True, wait_for_all=True, **kwds):
+    @check_units(timeout="?ms")
+    def get_captured_image(self, timeout="1s", copy=True, wait_for_all=True, **kwds):
         image_arrs = []
 
         if self._tot_frames and self._next_frame_idx >= self._tot_frames:
@@ -483,17 +503,17 @@ class TSI_Camera(Camera):
         self._handle_kwds(kwds)
 
         self._set_ROI(kwds)
-        self._set_exposure_time(kwds['exposure_time'])
-        self._set_trig_mode(kwds['trig'], kwds['rising'])
-        self._set_n_frames(kwds['n_frames'])
-        self._tot_frames = kwds['n_frames']
+        self._set_exposure_time(kwds["exposure_time"])
+        self._set_trig_mode(kwds["trig"], kwds["rising"])
+        self._set_n_frames(kwds["n_frames"])
+        self._tot_frames = kwds["n_frames"]
         self._partial_sequence = []
         self._next_frame_idx = 0
 
         self._dev.Stop()  # Ensure old captures are finished
         self._dev.Start()
 
-    @unit_mag(timeout='?s')
+    @unit_mag(timeout="?s")
     def wait_for_frame(self, timeout=None):
         timeout_s = timeout
         start_time = clock()
@@ -539,7 +559,7 @@ class TSI_Camera(Camera):
 
         self._set_ROI(kwds)
         self._set_trig_mode(self.TriggerMode.auto)
-        self._set_exposure_time(kwds['exposure_time'])
+        self._set_exposure_time(kwds["exposure_time"])
         self._set_n_frames(0)
         self._tot_frames = 0
         self._next_frame_idx = 0
@@ -552,7 +572,7 @@ class TSI_Camera(Camera):
 
     def _set_trig_mode(self, mode, rising=True):
         self._trig_mode = mode = as_enum(self.TriggerMode, mode)
-        use_hw_trigger = (mode != self.TriggerMode.auto)
+        use_hw_trigger = mode != self.TriggerMode.auto
         trig_source = mode.value
         polarity = TrigPol.ACTIVE_HIGH if rising else TrigPol.ACTIVE_LOW
 

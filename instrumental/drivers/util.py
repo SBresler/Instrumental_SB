@@ -16,7 +16,7 @@ from ..log import get_logger
 
 log = get_logger(__name__)
 
-__all__ = ['check_units', 'unit_mag', 'check_enums', 'as_enum', 'visa_timeout_context']
+__all__ = ["check_units", "unit_mag", "check_enums", "as_enum", "visa_timeout_context"]
 
 
 def to_quantity(value):
@@ -58,7 +58,7 @@ def _to_quantity(value):
 
         return Q_(mag, units)
     except Exception as e:
-        raise ValueError('Could not construct Quantity from {}'.format(value))
+        raise ValueError("Could not construct Quantity from {}".format(value))
 
 
 def as_enum(enum_type, arg):
@@ -81,12 +81,15 @@ def check_units(*pos, **named):
         def set_voltage(value):
             pass  # `value` will be a pint.Quantity with Volt-like units
     """
+
     def inout_map(arg, unit_info, name=None):
         if unit_info is None:
             return arg
 
-        use_units_msg = (" Make sure you're passing in a unitful value, either as a string or by "
-                         "using `instrumental.u` or `instrumental.Q_()`")
+        use_units_msg = (
+            " Make sure you're passing in a unitful value, either as a string or by "
+            "using `instrumental.u` or `instrumental.Q_()`"
+        )
 
         optional, units = unit_info
         if optional and arg is None:
@@ -99,22 +102,28 @@ def check_units(*pos, **named):
             else:
                 if name is not None:
                     extra_msg = " for argument '{}'.".format(name) + use_units_msg
-                    raise pint.DimensionalityError(u.dimensionless.units, units.units,
-                                                   extra_msg=extra_msg)
+                    raise pint.DimensionalityError(
+                        u.dimensionless.units, units.units, extra_msg=extra_msg
+                    )
                 else:
                     extra_msg = " for return value." + use_units_msg
-                    raise pint.DimensionalityError(u.dimensionless.units, units.units,
-                                                   extra_msg=extra_msg)
+                    raise pint.DimensionalityError(
+                        u.dimensionless.units, units.units, extra_msg=extra_msg
+                    )
         else:
             q = to_quantity(arg)
             if q.dimensionality != units.dimensionality:
-                extra_info = '' if isinstance(arg, Q_) else use_units_msg
+                extra_info = "" if isinstance(arg, Q_) else use_units_msg
                 if name is not None:
                     extra_msg = " for argument '{}'.".format(name) + extra_info
-                    raise pint.DimensionalityError(q.units, units.units, extra_msg=extra_msg)
+                    raise pint.DimensionalityError(
+                        q.units, units.units, extra_msg=extra_msg
+                    )
                 else:
                     extra_msg = " for return value." + extra_info
-                    raise pint.DimensionalityError(q.units, units.units, extra_msg=extra_msg)
+                    raise pint.DimensionalityError(
+                        q.units, units.units, extra_msg=extra_msg
+                    )
             return q
 
     return _unit_decorator(inout_map, inout_map, pos, named)
@@ -131,6 +140,7 @@ def unit_mag(*pos, **named):
             pass  # The input must be in Volt-like units and `value` will be a raw number
                   # expressing the magnitude in Volts
     """
+
     def in_map(arg, unit_info, name):
         if unit_info is None:
             return arg
@@ -145,11 +155,17 @@ def unit_mag(*pos, **named):
                 return arg
             else:
                 if name is not None:
-                    raise pint.DimensionalityError(u.dimensionless.units, units.units,
-                                                   extra_msg=" for argument '{}'".format(name))
+                    raise pint.DimensionalityError(
+                        u.dimensionless.units,
+                        units.units,
+                        extra_msg=" for argument '{}'".format(name),
+                    )
                 else:
-                    raise pint.DimensionalityError(u.dimensionless.units, units.units,
-                                                   extra_msg=" for return value")
+                    raise pint.DimensionalityError(
+                        u.dimensionless.units,
+                        units.units,
+                        extra_msg=" for return value",
+                    )
         else:
             q = to_quantity(arg)
             try:
@@ -158,8 +174,9 @@ def unit_mag(*pos, **named):
                 else:
                     return q.to(units).magnitude
             except pint.DimensionalityError:
-                raise pint.DimensionalityError(q.units, units.units,
-                                               extra_msg=" for argument '{}'".format(name))
+                raise pint.DimensionalityError(
+                    q.units, units.units, extra_msg=" for argument '{}'".format(name)
+                )
 
     def out_map(res, unit_info):
         if unit_info is None:
@@ -173,7 +190,9 @@ def unit_mag(*pos, **named):
             try:
                 return q
             except pint.DimensionalityError:
-                raise pint.DimensionalityError(q.units, units.units, extra_msg=" for return value")
+                raise pint.DimensionalityError(
+                    q.units, units.units, extra_msg=" for return value"
+                )
 
     return _unit_decorator(in_map, out_map, pos, named)
 
@@ -188,10 +207,13 @@ def check_enums(**kw_args):
         def set_mode(mode):
             pass  # `mode` will be of type SampleMode
     """
+
     def checker_factory(enum_type, arg_name):
         def checker(arg):
             return as_enum(enum_type, arg)
+
         return checker
+
     return arg_decorator(checker_factory, (), kw_args)
 
 
@@ -212,6 +234,7 @@ def arg_decorator(checker_factory, dec_pos_args, dec_kw_args):
     dec_kw_args : dict
         The keyword args (i.e. **kwargs) passed to the decorator constructor
     """
+
     def wrap(func):
         """Function that actually wraps the function to be decorated"""
         arg_names, vargs, kwds, default_vals = getargspec(func)
@@ -239,21 +262,27 @@ def arg_decorator(checker_factory, dec_pos_args, dec_kw_args):
 
         def wrapper(func, *args, **kwds):
             checked = new_defaults.copy()
-            checked.update({name: (checkers[name](arg) if name in checkers else arg) for name, arg
-                            in kwds.items()})
+            checked.update(
+                {
+                    name: (checkers[name](arg) if name in checkers else arg)
+                    for name, arg in kwds.items()
+                }
+            )
             for i, arg in enumerate(args):
                 name = pos_arg_names[i]
                 checked[name] = checkers[name](arg) if name in checkers else arg
 
             result = func(**checked)
             return result
+
         return decorator.decorate(func, wrapper)
+
     return wrap
 
 
 def _unit_decorator(in_map, out_map, pos_args, named_args):
     def wrap(func):
-        ret = named_args.pop('ret', None)
+        ret = named_args.pop("ret", None)
 
         if ret is None:
             ret_units = None
@@ -263,14 +292,14 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
                 if arg is None:
                     unit = None
                 elif isinstance(arg, basestring):
-                    optional = arg.startswith('?')
+                    optional = arg.startswith("?")
                     if optional:
                         arg = arg[1:]
                     unit = (optional, to_quantity(arg))
                 ret_units.append(unit)
             ret_units = tuple(ret_units)
         else:
-            optional = ret.startswith('?')
+            optional = ret.startswith("?")
             if optional:
                 arg = ret[1:]
             ret_units = to_quantity(arg)
@@ -282,7 +311,7 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
             if arg is None:
                 unit = None
             elif isinstance(arg, basestring):
-                optional = arg.startswith('?')
+                optional = arg.startswith("?")
                 if optional:
                     arg = arg[1:]
                 unit = (optional, to_quantity(arg))
@@ -295,7 +324,7 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
             if arg is None:
                 unit = None
             elif isinstance(arg, basestring):
-                optional = arg.startswith('?')
+                optional = arg.startswith("?")
                 if optional:
                     arg = arg[1:]
                 unit = (optional, to_quantity(arg))
@@ -307,7 +336,9 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
         for i, units in enumerate(pos_units):
             name = arg_names[i]
             if name in named_units:
-                raise Exception("Units of {} specified by position and by name".format(name))
+                raise Exception(
+                    "Units of {} specified by position and by name".format(name)
+                )
             named_units[name] = units
 
         # Pad out the rest of the positional units with None
@@ -332,10 +363,12 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
         def wrapper(func, *args, **kwargs):
             # Convert the input arguments
             new_args = [in_map(a, u, n) for a, u, n in zip(args, pos_units, arg_names)]
-            new_kwargs = {n: in_map(a, named_units.get(n, None), n) for n, a in kwargs.items()}
+            new_kwargs = {
+                n: in_map(a, named_units.get(n, None), n) for n, a in kwargs.items()
+            }
 
             # Fill in converted defaults
-            for name in arg_names[max(len(args), len(arg_names)-len(defaults)):]:
+            for name in arg_names[max(len(args), len(arg_names) - len(defaults)) :]:
                 if name not in new_kwargs:
                     new_kwargs[name] = new_defaults[name]
 
@@ -346,7 +379,9 @@ def _unit_decorator(in_map, out_map, pos_args, named_args):
                 return tuple(map(out_map, result, ret_units))
             else:
                 return out_map(result, ret_units)
+
         return decorator.decorate(func, wrapper)
+
     return wrap
 
 
@@ -364,8 +399,14 @@ def visa_timeout_context(resource, timeout):
     resource.timeout = old_timeout
 
 
-_ALLOWED_VISA_ATTRS = ['timeout', 'read_termination', 'write_termination', 'end_input', 'parity',
-                       'baud_rate']
+_ALLOWED_VISA_ATTRS = [
+    "timeout",
+    "read_termination",
+    "write_termination",
+    "end_input",
+    "parity",
+    "baud_rate",
+]
 
 
 @contextlib.contextmanager
@@ -394,7 +435,9 @@ def visa_context(resource, **settings):
 
     for attr_name in attr_names:
         if attr_name not in _ALLOWED_VISA_ATTRS:
-            raise AttributeError("VISA attribute '{}' is not supported by this context manager")
+            raise AttributeError(
+                "VISA attribute '{}' is not supported by this context manager"
+            )
 
     for attr_name in attr_names:
         old_values[attr_name] = getattr(resource, attr_name)

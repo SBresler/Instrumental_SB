@@ -32,8 +32,9 @@ class InstrumentExistsError(Error):
 
 class LibError(Error):
     MESSAGES = {}
-    MSG_FORMAT = '({:d}) {}'
-    def __init__(self, code=None, msg=''):
+    MSG_FORMAT = "({:d}) {}"
+
+    def __init__(self, code=None, msg=""):
         self.code = code
         if code is not None:
             if not msg:
@@ -57,8 +58,7 @@ class PCOError(Exception):
 
         This is the inverse of PCOError.return_code_to_hex_string()
         """
-        return_code_bytes = return_code.to_bytes(
-            4, byteorder="big", signed=True)
+        return_code_bytes = return_code.to_bytes(4, byteorder="big", signed=True)
         return_code_hex_string = return_code_bytes.hex().upper()
         return_code_hex_string = "0x" + return_code_hex_string
         return return_code_hex_string
@@ -77,15 +77,14 @@ class PCOError(Exception):
             hex_string = hex_string[2:]
 
         return_code_bytes = bytes.fromhex(hex_string)
-        return_code = int.from_bytes(
-            return_code_bytes, byteorder="big", signed=True)
+        return_code = int.from_bytes(return_code_bytes, byteorder="big", signed=True)
 
         return return_code
 
     @classmethod
     def get_error_text(cls, return_code):
         """Turn a pco.sdk error code into a useful/informative string
-        
+
         Use C function for this purpose if possible. Only works if that C code
         is compiled, which may be done automatically during installation, or may
         need to be done manually. Otherwise it will raise a ModuleNotFoundError.
@@ -101,6 +100,7 @@ class PCOError(Exception):
         try:
             # Use instrumental's nice wrapper of PCO_GetErrorText()
             import instrumental.drivers.cameras.pco
+
             return instrumental.drivers.cameras.pco.get_error_text(return_code)
         except ImportError:
             # If the wrapper doesn't work, we'll just print out the error code
@@ -118,11 +118,12 @@ class PCOError(Exception):
             # This masked code should appear in PCO_errt.h in a comment next to
             # the error string
             masked_return_code = return_code & mask
-            masked_return_code_hex = cls.return_code_to_hex_string(
-                masked_return_code)
+            masked_return_code_hex = cls.return_code_to_hex_string(masked_return_code)
 
-            error_text = ("PCO Error code: " + return_code_hex + ", "
-                          "Look for " + masked_return_code_hex + " in "
-                          "PCO_errt.h")
+            error_text = (
+                "PCO Error code: " + return_code_hex + ", "
+                "Look for " + masked_return_code_hex + " in "
+                "PCO_errt.h"
+            )
 
             return error_text

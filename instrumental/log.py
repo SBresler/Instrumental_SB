@@ -5,11 +5,11 @@ import logging
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
 
 
-#DEFAULT_FMT = "[%(levelname)8s:%(threadName)s]%(asctime)s %(name)s: %(message)s"
+# DEFAULT_FMT = "[%(levelname)8s:%(threadName)s]%(asctime)s %(name)s: %(message)s"
 DEFAULT_FMT = "[%(levelname)8s]%(asctime)s %(name)s: %(message)s"
 
 
-def get_logger(name='', add_NullHandler=False):
+def get_logger(name="", add_NullHandler=False):
     logger = logging.getLogger(name)
     if add_NullHandler:
         logger.addHandler(logging.NullHandler())
@@ -22,7 +22,7 @@ class Filter(object):
         self.lone_levels = {}
         self.levels = dict(levels)
         for name in list(levels.keys()):
-            if name.endswith('$'):
+            if name.endswith("$"):
                 self.lone_levels[name[:-1]] = self.levels.pop(name)
 
     def _get_level(self, name):
@@ -47,10 +47,10 @@ class Filter(object):
 
             if not base_name:
                 break
-            elif '.' in base_name:
-                base_name = base_name.rsplit('.', 1)[0]
+            elif "." in base_name:
+                base_name = base_name.rsplit(".", 1)[0]
             else:
-                base_name = ''
+                base_name = ""
 
         return WARNING  # Default
 
@@ -60,7 +60,7 @@ class Filter(object):
         return display
 
 
-PKG_LOGGER = get_logger('instrumental')
+PKG_LOGGER = get_logger("instrumental")
 ROOT_LOGGER = get_logger(add_NullHandler=True)
 
 
@@ -73,7 +73,7 @@ def log_to_screen(level=INFO, fmt=None):
         min_level = min(l for l in level.values())
     else:
         min_level = level
-        level = {'': level}
+        level = {"": level}
     handler.addFilter(Filter(level))
 
     handler.setFormatter(logging.Formatter(fmt=fmt))
@@ -83,7 +83,7 @@ def log_to_screen(level=INFO, fmt=None):
     return ROOT_LOGGER
 
 
-def log_to_file(filename, level=INFO, fmt=None, mode='a'):
+def log_to_file(filename, level=INFO, fmt=None, mode="a"):
     fmt = fmt or DEFAULT_FMT
     handler = logging.FileHandler(filename, mode=mode)
     handler.setLevel(DEBUG)
@@ -92,7 +92,7 @@ def log_to_file(filename, level=INFO, fmt=None, mode='a'):
         min_level = min(l for l in level.values())
     else:
         min_level = level
-        level = {'': level}
+        level = {"": level}
     handler.addFilter(Filter(level))
 
     handler.setFormatter(logging.Formatter(fmt=fmt))

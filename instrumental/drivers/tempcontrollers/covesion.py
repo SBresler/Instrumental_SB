@@ -18,8 +18,8 @@ from ... import u, Q_
 from ...errors import TimeoutError
 
 
-_INST_PARAMS = ['visa_address']
-_INST_CLASSES = ['CovesionOC']
+_INST_PARAMS = ["visa_address"]
+_INST_CLASSES = ["CovesionOC"]
 
 # Commands by letter, deduced from LabVIEW code
 # Includes the fields that can be read, with their printf-style format
@@ -171,25 +171,24 @@ _INST_CLASSES = ['CovesionOC']
 
 
 DATA_FORMAT = {
-    b'j': (
-        ('setpoint', float),
-        ('temperature', float),
-        ('control', int),
-        ('output', float),
-        ('alarms', int),
-        ('faults', int),
-        ('temp_ok', int),
-        ('supply_vdc', float),
-        ('version', bytes.decode),
-        ('test_cycle', int),
-        ('test_mode', int),
+    b"j": (
+        ("setpoint", float),
+        ("temperature", float),
+        ("control", int),
+        ("output", float),
+        ("alarms", int),
+        ("faults", int),
+        ("temp_ok", int),
+        ("supply_vdc", float),
+        ("version", bytes.decode),
+        ("test_cycle", int),
+        ("test_mode", int),
     )
 }
 
 
 def _is_CovesionOC(rsrc):
-    with visa_context(rsrc, read_termination='\r\n', baud_rate=19200,
-                      timeout=1000):
+    with visa_context(rsrc, read_termination="\r\n", baud_rate=19200, timeout=1000):
         # Try twice in case of serial errors
         for _ in range(2):
             try:
@@ -209,8 +208,8 @@ def _is_CovesionOC(rsrc):
 
 
 def _check_visa_support(rsrc):
-    if rsrc.resource_name.startswith('ASRL') and _is_CovesionOC(rsrc):
-        return 'CovesionOC'
+    if rsrc.resource_name.startswith("ASRL") and _is_CovesionOC(rsrc):
+        return "CovesionOC"
     return None
 
 
@@ -233,13 +232,13 @@ def grab_latest_message(rsrc):
 
 def parse_message(msg):
     """Parse a message into a {field: value} dict and check the checksum"""
-    assert msg[0:1] == b'\x01'
+    assert msg[0:1] == b"\x01"
 
     cmd = msg[1:2]
     data_len = int(msg[2:4])
     assert len(msg) == data_len + 6
 
-    data = msg[4:].split(b';')
+    data = msg[4:].split(b";")
     checksum = int(data.pop(-1), base=16)
     calc_checksum = sum(bytearray(msg[:-2])) % 256
     assert checksum == calc_checksum
@@ -261,7 +260,7 @@ def read_latest_message(rsrc):
 
 def process_data(cmd, data):
     cmd_tup = DATA_FORMAT[cmd]
-    return {e[0]:e[1](v) for e,v in zip(cmd_tup, data)}
+    return {e[0]: e[1](v) for e, v in zip(cmd_tup, data)}
 
 
 class CovesionOC(TempController, VisaMixin):
@@ -270,37 +269,45 @@ class CovesionOC(TempController, VisaMixin):
     def _initialize(self):
         self.resource.parity = Parity.none
         self.resource.baud_rate = 19200
-        self.resource.read_termination = '\r\n'
-        self.resource.write_termination = '\n'
+        self.resource.read_termination = "\r\n"
+        self.resource.write_termination = "\n"
         self.resource.timeout = 500
 
     def _read_status(self):
         return read_latest_message(self.resource)
 
-    @Facet(units='degC')
+    @Facet(units="degC")
     def current_temperature(self):
-        return self._read_status()['temperature']
+        return self._read_status()["temperature"]
 
-    @Facet(units='degC')
+    @Facet(units="degC")
     def temperature_setpoint(self):
-        return self._read_status()['setpoint']
+        return self._read_status()["setpoint"]
 
-    @check_units(setpoint='degC')
+    @check_units(setpoint="degC")
     def _write_setpoint(self, setpoint):
         """Write a temperature setpoint to the device"""
-        setpoint_C = setpoint.m_as('degC')
-        data = b'%1d;%.3f;%.3f;%.3f;%.0f;%.2f;%.2f;' % (1, setpoint_C, 25., 0., 25., 100., 0.)
-        base_msg = b'\x01i%02d%s' % (len(data), data)
+        setpoint_C = setpoint.m_as("degC")
+        data = b"%1d;%.3f;%.3f;%.3f;%.0f;%.2f;%.2f;" % (
+            1,
+            setpoint_C,
+            25.0,
+            0.0,
+            25.0,
+            100.0,
+            0.0,
+        )
+        base_msg = b"\x01i%02d%s" % (len(data), data)
         checksum = sum(bytearray(base_msg)) % 256
-        msg = b'%s%02x' % (base_msg, checksum)
+        msg = b"%s%02x" % (base_msg, checksum)
         self.resource.write_raw(msg)
 
-    @check_units(setpoint='degC')
+    @check_units(setpoint="degC")
     def _ramp_to_setpoint(self, setpoint):
         self._start_temp = self.current_temperature
         self._final_temp = setpoint
 
-        ramp_rate = Q_(10, 'delta_degC/minute')
+        ramp_rate = Q_(10, "delta_degC/minute")
         delta_T = abs(self._final_temp - self._start_temp)
         self._ramp_time = delta_T / ramp_rate
         cur_time = time.time() * u.s
@@ -309,34 +316,37 @@ class CovesionOC(TempController, VisaMixin):
         while cur_time < self._ramp_end_time:
             cur_setpoint = self._current_ramp_setpoint()
             self._write_setpoint(cur_setpoint)
-            time.sleep(1.)
+            time.sleep(1.0)
             cur_time = time.time() * u.s
         self._write_setpoint(self._final_temp)
 
     def _current_ramp_setpoint(self):
-        frac_time_left = (self._ramp_end_time - time.time()*u.s) / self._ramp_time
+        frac_time_left = (self._ramp_end_time - time.time() * u.s) / self._ramp_time
         return self._final_temp + (self._start_temp - self._final_temp) * frac_time_left
 
-    @check_units(temperature='degC', max_err='delta_degC', timeout='s')
+    @check_units(temperature="degC", max_err="delta_degC", timeout="s")
     def _wait_for_temperature(self, temperature, max_err, n_samples, timeout):
-        errors = [2*max_err] * n_samples
+        errors = [2 * max_err] * n_samples
 
         cur_time_s = time.time()
-        stop_time_s = cur_time_s + timeout.m_as('s')
+        stop_time_s = cur_time_s + timeout.m_as("s")
 
         i = 0
         while any(e > max_err for e in errors) and (cur_time_s < stop_time_s):
             errors[i] = abs(self.current_temperature - temperature)
-            i = (i+1) % n_samples
+            i = (i + 1) % n_samples
             cur_time_s = time.time()
 
         if cur_time_s >= stop_time_s:
-            raise TimeoutError('Timeout while waiting for Covesion OC1 to reach temperature '
-                               '{:~.2f}'.format(temperature))
+            raise TimeoutError(
+                "Timeout while waiting for Covesion OC1 to reach temperature "
+                "{:~.2f}".format(temperature)
+            )
 
-    @check_units(setpoint='degC', max_err='delta_degC', timeout='s')
-    def set_setpoint_and_wait(self, setpoint, max_err='0.1 delta_degC', n_samples=10,
-                              timeout='5 min'):
+    @check_units(setpoint="degC", max_err="delta_degC", timeout="s")
+    def set_setpoint_and_wait(
+        self, setpoint, max_err="0.1 delta_degC", n_samples=10, timeout="5 min"
+    ):
         """Set the temperature setpoint and wait until it is reached
 
         Parameters

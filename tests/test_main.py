@@ -7,6 +7,7 @@ def test_list_instruments():
 
 def test_import_all():
     import instrumental
+
     for attr in dir(instrumental):
         try:
             getattr(instrumental, attr)

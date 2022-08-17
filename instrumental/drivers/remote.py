@@ -28,14 +28,17 @@ DEFAULT_PORT = 28265
 # Header format is:
 # 1 unsigned byte - message id
 # 8 unsigned bytes - message length in bytes (not including header)
-STRUCT = struct.Struct('!BQ')
+STRUCT = struct.Struct("!BQ")
 
 
 class FakeLock(object):
     def __enter__(self):
         pass
+
     def __exit__(self, type, value, traceback):
         pass
+
+
 FAKE_LOCK = FakeLock()  # Only need one
 
 
@@ -49,6 +52,7 @@ class RemoteTimeoutError(RemoteError):
 
 class Messenger(object):
     """Low-level messenger used to send and receive discrete, numbered byte-level messages"""
+
     def __init__(self):
         self.leftover = None
 
@@ -59,7 +63,9 @@ class Messenger(object):
         except socket.timeout:
             raise RemoteTimeoutError("Timed out while sending message data")
         except Exception as e:
-            raise RemoteError("Socket error while sending message data: {}".format(str(e)))
+            raise RemoteError(
+                "Socket error while sending message data: {}".format(str(e))
+            )
 
     def _recv_message(self):
         if self.leftover:
@@ -75,7 +81,9 @@ class Messenger(object):
             except socket.timeout:
                 raise RemoteTimeoutError("Timed out while waiting for message data")
             except Exception as e:
-                raise RemoteError("Socket error while waiting for message data: {}".format(str(e)))
+                raise RemoteError(
+                    "Socket error while waiting for message data: {}".format(str(e))
+                )
 
             chunks.append(chunk)
             bytes_recd += len(chunk)
@@ -84,23 +92,25 @@ class Messenger(object):
                     return None
                 raise RuntimeError("Socket connection ended unexpectedly")
 
-        id, length = self.read_header(b''.join(chunks))
+        id, length = self.read_header(b"".join(chunks))
 
-        while bytes_recd < length+9:
+        while bytes_recd < length + 9:
             try:
                 chunk = self.sock.recv(4096)
             except socket.timeout:
                 raise RemoteTimeoutError("Timed out while waiting for message data")
             except Exception as e:
-                raise RemoteError("Socket error while waiting for message data: {}".format(str(e)))
+                raise RemoteError(
+                    "Socket error while waiting for message data: {}".format(str(e))
+                )
 
             chunks.append(chunk)
             bytes_recd += len(chunk)
             if not chunk:
                 raise RuntimeError("Socket connection ended unexpectedly")
 
-        full_msg = b''.join(chunks)
-        chunks = [full_msg[9+length:]]
+        full_msg = b"".join(chunks)
+        chunks = [full_msg[9 + length :]]
         return full_msg[9:], id
 
     @staticmethod
@@ -120,6 +130,7 @@ class Messenger(object):
 
 class Session(object):
     """High-level session"""
+
     @staticmethod
     def serialize(obj):
         return pickle.dumps(obj)
@@ -162,54 +173,58 @@ class ClientSession(Session):
         try:
             self.messenger = ClientMessenger(host, port)
         except socket.timeout:
-            raise RemoteTimeoutError("Could not connect to host at {}:{}; timed out".format(host, port))
+            raise RemoteTimeoutError(
+                "Could not connect to host at {}:{}; timed out".format(host, port)
+            )
         except Exception as e:
-            raise RemoteError("Socket error while connecting to host: {}".format(str(e)))
+            raise RemoteError(
+                "Socket error while connecting to host: {}".format(str(e))
+            )
 
     def close(self):
         self.messenger.close()
 
     def request(self, **message_dict):
-        log.debug('Sending request %r', message_dict)
+        log.debug("Sending request %r", message_dict)
         message = self.serialize(message_dict)
         response = self.messenger.make_request(message)
         response_obj = self.deserialize(response)
-        log.debug('Got response %r', response_obj)
+        log.debug("Got response %r", response_obj)
         if isinstance(response_obj, Exception):
             raise response_obj
         return response_obj
 
     def list_instruments(self):
-        instr_list = self.request(command='list')
+        instr_list = self.request(command="list")
         for instr in instr_list:
-            instr['server'] = self.server
+            instr["server"] = self.server
         return instr_list
 
     def instrument(self, params):
-        response = self.request(command='create', params=params)
+        response = self.request(command="create", params=params)
         response._session = self
         return response
 
     def get_obj_attr(self, obj_id, attr):
-        obj = self.request(command='attr', obj_id=obj_id, attr=attr)
+        obj = self.request(command="attr", obj_id=obj_id, attr=attr)
         if isinstance(obj, RemoteObject):
             obj._session = self
         return obj
 
     def set_obj_attr(self, obj_id, attr, value):
-        self.request(command='setattr', obj_id=obj_id, attr=attr, value=value)
+        self.request(command="setattr", obj_id=obj_id, attr=attr, value=value)
 
     def get_obj_item(self, obj_id, key):
-        obj = self.request(command='item', obj_id=obj_id, key=key)
+        obj = self.request(command="item", obj_id=obj_id, key=key)
         if isinstance(obj, RemoteObject):
             obj._session = self
         return obj
 
     def set_obj_item(self, obj_id, key, value):
-        self.request(command='setitem', obj_id=obj_id, key=key, value=value)
+        self.request(command="setitem", obj_id=obj_id, key=key, value=value)
 
     def get_obj_call(self, obj_id, *args, **kwargs):
-        obj = self.request(command='call', obj_id=obj_id, args=args, kwargs=kwargs)
+        obj = self.request(command="call", obj_id=obj_id, args=args, kwargs=kwargs)
         if isinstance(obj, RemoteObject):
             obj._session = self
         return obj
@@ -217,6 +232,7 @@ class ClientSession(Session):
 
 class ServerMessenger(Messenger):
     """Server-side session representing a connection to a client"""
+
     def __init__(self, socket):
         super(ServerMessenger, self).__init__()
         self.sock = socket
@@ -234,8 +250,10 @@ class ServerMessenger(Messenger):
     def respond(self, response_bytes):
         """Respond (in bytes) to a message received via listen()"""
         if self.curr_id is None:
-            raise Exception("Invalid message id. respond() must be used to respond to a "
-                            "message received via listen()")
+            raise Exception(
+                "Invalid message id. respond() must be used to respond to a "
+                "message received via listen()"
+            )
         self._send_message(response_bytes, self.curr_id)
 
 
@@ -251,13 +269,13 @@ class ObjectEntry(object):
 class ServerSession(Session):
     def __init__(self, socket, shared_obj_table, table_lock):
         self.command_handler = {
-            'create': self.handle_create,
-            'list': self.handle_list,
-            'attr': self.handle_attr,
-            'setattr': self.handle_setattr,
-            'item': self.handle_item,
-            'setitem': self.handle_setitem,
-            'call': self.handle_call
+            "create": self.handle_create,
+            "list": self.handle_list,
+            "attr": self.handle_attr,
+            "setattr": self.handle_setattr,
+            "item": self.handle_item,
+            "setitem": self.handle_setitem,
+            "call": self.handle_call,
         }
         self.shared_obj_table = shared_obj_table
         self.shared_table_lock = table_lock
@@ -298,15 +316,16 @@ class ServerSession(Session):
                 pass
 
             # Delete instrument from shared_obj_table
-            keys_to_remove = [k for k,v in self.shared_obj_table.items()
-                              if v is entry.obj]
+            keys_to_remove = [
+                k for k, v in self.shared_obj_table.items() if v is entry.obj
+            ]
             for key in keys_to_remove:
                 del self.shared_obj_table[key]
 
     def handle_create(self, request):
-        params = request['params']._dict.copy()
-        params.pop('server')  # Needed to force instrument() to look locally
-        share = params.pop('share', False)
+        params = request["params"]._dict.copy()
+        params.pop("server")  # Needed to force instrument() to look locally
+        share = params.pop("share", False)
 
         if share:
             inst, lock = self._get_shared_inst(params)
@@ -316,8 +335,9 @@ class ServerSession(Session):
             lock = FAKE_LOCK
 
         obj_id = id(inst)
-        remote_obj = RemoteInstrument._create_remote(request['params'], obj_id, None, dir(inst),
-                                                     repr(inst))
+        remote_obj = RemoteInstrument._create_remote(
+            request["params"], obj_id, None, dir(inst), repr(inst)
+        )
         self.obj_table[obj_id] = ObjectEntry(inst, remote_obj, lock, share)
         return remote_obj, lock
 
@@ -326,36 +346,36 @@ class ServerSession(Session):
         return list_instruments(), FAKE_LOCK
 
     def handle_attr(self, request):
-        obj_id = request['obj_id']
+        obj_id = request["obj_id"]
         entry = self.obj_table[obj_id]
         with entry.lock:
-            return getattr(entry.obj, request['attr']), entry.lock
+            return getattr(entry.obj, request["attr"]), entry.lock
 
     def handle_setattr(self, request):
-        obj_id = request['obj_id']
+        obj_id = request["obj_id"]
         entry = self.obj_table[obj_id]
         with entry.lock:
-            setattr(entry.obj, request['attr'], request['value'])
+            setattr(entry.obj, request["attr"], request["value"])
         return None, FAKE_LOCK
 
     def handle_item(self, request):
-        obj_id = request['obj_id']
+        obj_id = request["obj_id"]
         entry = self.obj_table[obj_id]
         with entry.lock:
-            return entry.obj[request['key']], entry.lock
+            return entry.obj[request["key"]], entry.lock
 
     def handle_setitem(self, request):
-        obj_id = request['obj_id']
+        obj_id = request["obj_id"]
         entry = self.obj_table[obj_id]
         with entry.lock:
-            entry.obj[request['key']] = request['value']
+            entry.obj[request["key"]] = request["value"]
         return None, FAKE_LOCK
 
     def handle_call(self, request):
-        obj_id = request['obj_id']
+        obj_id = request["obj_id"]
         entry = self.obj_table[obj_id]
         with entry.lock:
-            return entry.obj(*request['args'], **request['kwargs']), entry.lock
+            return entry.obj(*request["args"], **request["kwargs"]), entry.lock
 
     def handle_none(self, request):
         return Exception("Unknown command"), FAKE_LOCK
@@ -380,7 +400,7 @@ class ServerSession(Session):
         with lock:
             obj_id = id(obj)
             remote_obj = RemoteObject(obj_id, dir(obj), repr(obj))
-            shared = (lock is not FAKE_LOCK)
+            shared = lock is not FAKE_LOCK
             self.obj_table[obj_id] = ObjectEntry(obj, remote_obj, lock, shared)
             return remote_obj
 
@@ -392,8 +412,8 @@ class ServerSession(Session):
                 break
 
             request = self.deserialize(message_bytes)
-            log.debug('Received request %r', request)
-            command = request.pop('command')
+            log.debug("Received request %r", request)
+            command = request.pop("command")
 
             try:
                 handler = self.command_handler.get(command, self.handle_none)
@@ -403,28 +423,30 @@ class ServerSession(Session):
                 response = e
                 lock = FAKE_LOCK
 
-            log.info('Sending response %r', response)
+            log.info("Sending response %r", response)
             self.messenger.respond(self.serialize(response, lock))
 
         # Clean up before we exit
-        log.info('Cleaning up open objects')
+        log.info("Cleaning up open objects")
         for entry in self.obj_table.values():
             if isinstance(entry.obj, Instrument):
                 if entry.share:
                     self._close_shared_inst(entry)
                 else:
                     try:
-                        log.info('Closing %s', entry.obj)
+                        log.info("Closing %s", entry.obj)
                         entry.obj.close()
                     except Exception:
-                        log.info('Closing instrument failed!')
+                        log.info("Closing instrument failed!")
         self.obj_table.clear()
 
 
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         log.info("Opening connection to client...")
-        session = ServerSession(self.request, self.server.shared_obj_table, self.server.table_lock)
+        session = ServerSession(
+            self.request, self.server.shared_obj_table, self.server.table_lock
+        )
         session.handle_requests()
 
 
@@ -438,22 +460,22 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 class RemoteObject(object):
     def __init__(self, id, dirlist, reprname, session=None):
-        self.__dict__['_local_attrs'] = set(('_local_attrs',))
-        self._local_setattr('_obj_id', id)
-        self._local_setattr('_reprname', "<Remote {}>".format(reprname))
-        self._local_setattr('_session', session)
-        self._local_setattr('_dirlist', dirlist)
+        self.__dict__["_local_attrs"] = set(("_local_attrs",))
+        self._local_setattr("_obj_id", id)
+        self._local_setattr("_reprname", "<Remote {}>".format(reprname))
+        self._local_setattr("_session", session)
+        self._local_setattr("_dirlist", dirlist)
 
     def _local_setattr(self, name, value):
         self.__dict__[name] = value
         self._local_attrs.add(name)
 
     def __enter__(self):
-        return self.__getattr__('__enter__')()
+        return self.__getattr__("__enter__")()
 
     def __exit__(self, type, value, traceback):
         # Can't pickle a traceback object, so we don't send it, and hope for the best...
-        return self.__getattr__('__exit__')(type, value, None)
+        return self.__getattr__("__exit__")(type, value, None)
 
     def __dir__(self):
         return self._dirlist
@@ -488,14 +510,14 @@ class RemoteObject(object):
 
 class RemoteInstrument(RemoteObject, Instrument):
     def __new__(cls, *args, **kwds):
-        log.info('Calling RemoteInstrument.__new__...')
+        log.info("Calling RemoteInstrument.__new__...")
         return RemoteObject.__new__(RemoteInstrument)
 
     @classmethod
     def _create_remote(cls, params, id, session, dirlist, reprname):
-        log.info('Creating RemoteInstrument, session=%s', session)
+        log.info("Creating RemoteInstrument, session=%s", session)
         obj = RemoteObject(id, dirlist, reprname, session)
-        obj._local_setattr('_paramset', params)
+        obj._local_setattr("_paramset", params)
         return obj
 
 
@@ -506,7 +528,7 @@ def client_session(server):
     else:
         host = server
 
-    split = host.rsplit(':', 1)
+    split = host.rsplit(":", 1)
     if len(split) == 2:
         host = split[0]
         port = int(split[1])
@@ -517,6 +539,8 @@ def client_session(server):
     if (host, port) not in client_session.sessions:
         client_session.sessions[(host, port)] = ClientSession(host, port, server)
     return client_session.sessions[(host, port)]
+
+
 client_session.sessions = {}
 
 

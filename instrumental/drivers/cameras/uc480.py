@@ -13,26 +13,37 @@ import fnmatch
 import numpy as np
 import win32event  # req: pywin32
 
-from nicelib import (NiceLib, NiceObject, load_lib,
-                     RetHandler, Sig, ret_return)  # req: nicelib >= 0.5
+from nicelib import (
+    NiceLib,
+    NiceObject,
+    load_lib,
+    RetHandler,
+    Sig,
+    ret_return,
+)  # req: nicelib >= 0.5
 
 from . import Camera
 from ..util import check_units
 from .. import ParamSet, Facet
-from ...errors import (InstrumentNotFoundError, Error, TimeoutError, LibError,
-                       UnsupportedFeatureError)
+from ...errors import (
+    InstrumentNotFoundError,
+    Error,
+    TimeoutError,
+    LibError,
+    UnsupportedFeatureError,
+)
 from ...log import get_logger
 from ... import Q_
 
 log = get_logger(__name__)
 
-_INST_PARAMS = ['serial', 'id', 'model']
-_INST_CLASSES = ['UC480_Camera']
+_INST_PARAMS = ["serial", "id", "model"]
+_INST_CLASSES = ["UC480_Camera"]
 
-info = load_lib('uc480', __package__)
+info = load_lib("uc480", __package__)
 ffi = info._ffi
 
-__all__ = ['UC480_Camera']
+__all__ = ["UC480_Camera"]
 
 global_weakkeydict = weakref.WeakKeyDictionary()
 
@@ -41,11 +52,11 @@ def to_bytes(text):
     if isinstance(text, bytes):
         return text
     elif isinstance(text, unicode):
-        text.encode('utf-8')
+        text.encode("utf-8")
 
 
 def char_to_int(char):
-    return struct.unpack('B', char)[0]
+    return struct.unpack("B", char)[0]
 
 
 def cmd_ret_handler(getcmd_names, cmd_pos=1):
@@ -64,9 +75,11 @@ def cmd_ret_handler(getcmd_names, cmd_pos=1):
     if isinstance(getcmd_names, basestring):
         getcmd_names = (getcmd_names,)
 
-    getcmd_vals = [info._defs[const_name]
-                   for pattern in getcmd_names
-                   for const_name in fnmatch.filter(info._defs.keys(), pattern)]
+    getcmd_vals = [
+        info._defs[const_name]
+        for pattern in getcmd_names
+        for const_name in fnmatch.filter(info._defs.keys(), pattern)
+    ]
 
     # Note: we don't specify num_retvals, since it depends on the command issued
     @RetHandler
@@ -74,7 +87,7 @@ def cmd_ret_handler(getcmd_names, cmd_pos=1):
         # Need to cast in case arg is CData
         if int(funcargs[cmd_pos]) in getcmd_vals:
             return result
-        elif result != info._defs['IS_SUCCESS']:
+        elif result != info._defs["IS_SUCCESS"]:
             raise get_last_error(result, niceobj)
 
     return wrap
@@ -84,10 +97,14 @@ class UC480Error(LibError):
     MESSAGES = {
         -1: "Undefined error occurred",
         1: "Invalid camera handle",
-        2: ("An IO request from the uc480 driver failed. Maybe the versions of the DLL (API) and "
-            "the driver (.sys) file do not match"),
-        3: ("An attempt to initialize or select the camera failed (no camera connected or "
-            "initialization error)"),
+        2: (
+            "An IO request from the uc480 driver failed. Maybe the versions of the DLL (API) and "
+            "the driver (.sys) file do not match"
+        ),
+        3: (
+            "An attempt to initialize or select the camera failed (no camera connected or "
+            "initialization error)"
+        ),
     }
 
 
@@ -95,6 +112,7 @@ def sig(*args):
     def decorator(func):
         func.sig = args
         return func
+
     return decorator
 
 
@@ -113,7 +131,7 @@ def ret_cam_errcheck(result, niceobj):
 @RetHandler(num_retvals=0)
 def ret_geterror(result, niceobj):
     if result != NiceUC480.SUCCESS:
-        raise UC480Error(code=result, msg='Call to GetError() failed')
+        raise UC480Error(code=result, msg="Call to GetError() failed")
 
 
 def get_last_error(result, niceobj):
@@ -124,76 +142,96 @@ def get_last_error(result, niceobj):
     try:
         err_code, err_msg = niceobj.GetError()
     except Exception:
-        err_msg = ('Error. While handling this error, GetError failed, so no error message '
-                   'is available. Please look up the error code in the DCx SDK manual')
+        err_msg = (
+            "Error. While handling this error, GetError failed, so no error message "
+            "is available. Please look up the error code in the DCx SDK manual"
+        )
     return UC480Error(code=result, msg=err_msg)
 
 
 class NiceUC480(NiceLib):
     _info_ = info
-    _prefix_ = ('is_', 'IS_')
+    _prefix_ = ("is_", "IS_")
     _ret_ = ret_errcheck
 
     # Classmethods
     #
-    GetNumberOfCameras = Sig('out')
-    GetCameraList = Sig('inout')
-    InitCamera = Sig('inout', 'in')
+    GetNumberOfCameras = Sig("out")
+    GetCameraList = Sig("inout")
+    InitCamera = Sig("inout", "in")
 
     # Camera methods
     #
     class Camera(NiceObject):
-        _init_ = 'InitCamera'
+        _init_ = "InitCamera"
         _ret_ = ret_cam_errcheck
 
-        AddToSequence = Sig('in', 'in', 'in')
-        AllocImageMem = Sig('in', 'in', 'in', 'in', 'out', 'out')
-        CaptureVideo = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_LIVE'))
-        ClearSequence = Sig('in')
-        DisableEvent = Sig('in', 'in')
-        EnableEvent = Sig('in', 'in')
-        ExitCamera = Sig('in')
-        ExitEvent = Sig('in', 'in')
-        ExitImageQueue = Sig('in')
-        FreeImageMem = Sig('in', 'in', 'in')
-        GetActSeqBuf = Sig('in', 'out', 'out', 'out')
-        GetError = Sig('in', 'out', 'bufout', ret=ret_geterror)
-        GetImageMemPitch = Sig('in', 'out')
-        GetSensorInfo = Sig('in', 'out')
-        HasVideoStarted = Sig('in', 'out')
-        InitEvent = Sig('in', 'in', 'in')
-        InitImageQueue = Sig('in', 'in')
-        ParameterSet = Sig('in', 'in', 'inout', 'in')
-        ResetToDefault = Sig('in')
-        SetAutoParameter = Sig('in', 'in', 'inout', 'inout')
-        SetBinning = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_*BINNING*'))
-        SetCameraID = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_CAMERA_ID'))
-        SetColorMode = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_COLOR_MODE'))
-        SetDisplayMode = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_DISPLAY_MODE'))
-        SetExternalTrigger = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_*TRIGGER*'))
-        SetFrameRate = Sig('in', 'in', 'out')
-        SetGainBoost = Sig('in', 'in', ret=cmd_ret_handler(('IS_GET_GAINBOOST',
-                                                           'IS_GET_SUPPORTED_GAINBOOST')))
-        SetHWGainFactor = Sig('in', 'in', 'in', ret=ret_return)
-        SetSubSampling = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_*SUBSAMPLING*'))
-        SetTriggerDelay = Sig('in', 'in', ret=cmd_ret_handler('IS_GET_*TRIGGER*'))
-        StopLiveVideo = Sig('in', 'in')
-        SetHardwareGain = Sig('in', 'in', 'in', 'in', 'in',
-                              ret=cmd_ret_handler(
-                                  ('IS_GET_MASTER_GAIN', 'IS_GET_RED_GAIN', 'IS_GET_GREEN_GAIN',
-                                   'IS_GET_BLUE_GAIN', 'IS_GET_DEFAULT_MASTER',
-                                   'IS_GET_DEFAULT_RED', 'IS_GET_DEFAULT_GREEN',
-                                   'IS_GET_DEFAULT_BLUE')))
+        AddToSequence = Sig("in", "in", "in")
+        AllocImageMem = Sig("in", "in", "in", "in", "out", "out")
+        CaptureVideo = Sig("in", "in", ret=cmd_ret_handler("IS_GET_LIVE"))
+        ClearSequence = Sig("in")
+        DisableEvent = Sig("in", "in")
+        EnableEvent = Sig("in", "in")
+        ExitCamera = Sig("in")
+        ExitEvent = Sig("in", "in")
+        ExitImageQueue = Sig("in")
+        FreeImageMem = Sig("in", "in", "in")
+        GetActSeqBuf = Sig("in", "out", "out", "out")
+        GetError = Sig("in", "out", "bufout", ret=ret_geterror)
+        GetImageMemPitch = Sig("in", "out")
+        GetSensorInfo = Sig("in", "out")
+        HasVideoStarted = Sig("in", "out")
+        InitEvent = Sig("in", "in", "in")
+        InitImageQueue = Sig("in", "in")
+        ParameterSet = Sig("in", "in", "inout", "in")
+        ResetToDefault = Sig("in")
+        SetAutoParameter = Sig("in", "in", "inout", "inout")
+        SetBinning = Sig("in", "in", ret=cmd_ret_handler("IS_GET_*BINNING*"))
+        SetCameraID = Sig("in", "in", ret=cmd_ret_handler("IS_GET_CAMERA_ID"))
+        SetColorMode = Sig("in", "in", ret=cmd_ret_handler("IS_GET_COLOR_MODE"))
+        SetDisplayMode = Sig("in", "in", ret=cmd_ret_handler("IS_GET_DISPLAY_MODE"))
+        SetExternalTrigger = Sig("in", "in", ret=cmd_ret_handler("IS_GET_*TRIGGER*"))
+        SetFrameRate = Sig("in", "in", "out")
+        SetGainBoost = Sig(
+            "in",
+            "in",
+            ret=cmd_ret_handler(("IS_GET_GAINBOOST", "IS_GET_SUPPORTED_GAINBOOST")),
+        )
+        SetHWGainFactor = Sig("in", "in", "in", ret=ret_return)
+        SetSubSampling = Sig("in", "in", ret=cmd_ret_handler("IS_GET_*SUBSAMPLING*"))
+        SetTriggerDelay = Sig("in", "in", ret=cmd_ret_handler("IS_GET_*TRIGGER*"))
+        StopLiveVideo = Sig("in", "in")
+        SetHardwareGain = Sig(
+            "in",
+            "in",
+            "in",
+            "in",
+            "in",
+            ret=cmd_ret_handler(
+                (
+                    "IS_GET_MASTER_GAIN",
+                    "IS_GET_RED_GAIN",
+                    "IS_GET_GREEN_GAIN",
+                    "IS_GET_BLUE_GAIN",
+                    "IS_GET_DEFAULT_MASTER",
+                    "IS_GET_DEFAULT_RED",
+                    "IS_GET_DEFAULT_GREEN",
+                    "IS_GET_DEFAULT_BLUE",
+                )
+            ),
+        )
 
         # Hand-wrapped methods
         #
-        @Sig('in', 'in', 'inout', 'in')
+        @Sig("in", "in", "inout", "in")
         def AOI(self, command, param=None):
             """AOI(command, param=None)"""
             if command & lib.AOI_MULTI_GET_AOI:
                 if command == lib.AOI_MULTI_GET_AOI:
-                    raise Error("command AOI_MULTI_GET_AOI must be or'd together with another flag")
-                param_type = 'UINT[8]'
+                    raise Error(
+                        "command AOI_MULTI_GET_AOI must be or'd together with another flag"
+                    )
+                param_type = "UINT[8]"
                 getting = True
             elif command in AOI_GET_PARAM_TYPES:
                 param_type = AOI_GET_PARAM_TYPES[command]
@@ -210,17 +248,17 @@ class NiceUC480(NiceLib):
                 raise ValueError("Must give a param value when using a SET command")
 
             param_type = ffi.typeof(param_type)
-            deref = (param_type.kind == 'pointer')  # Don't dereference arrays
+            deref = param_type.kind == "pointer"  # Don't dereference arrays
 
             param_data = ffi.new(param_type, param)
             size = ffi.sizeof(ffi.typeof(param_data).item if deref else param_data)
-            param_ptr = ffi.cast('void*', param_data)
+            param_ptr = ffi.cast("void*", param_data)
             self._autofunc_AOI(command, param_ptr, size)
 
             if getting:
                 return param_data[0] if deref else param_data
 
-        @Sig('in', 'in', 'inout', 'in')
+        @Sig("in", "in", "inout", "in")
         def Exposure(self, command, param=None):
             if command in EXPOSURE_GET_PARAM_TYPES:
                 param_type = EXPOSURE_GET_PARAM_TYPES[command]
@@ -237,17 +275,17 @@ class NiceUC480(NiceLib):
                 raise ValueError("Must give a param value when using a SET command")
 
             param_type = ffi.typeof(param_type)
-            deref = (param_type.kind == 'pointer')  # Don't dereference arrays
+            deref = param_type.kind == "pointer"  # Don't dereference arrays
 
             param_data = ffi.new(param_type, param)
             size = ffi.sizeof(ffi.typeof(param_data).item if deref else param_data)
-            param_ptr = ffi.cast('void*', param_data)
+            param_ptr = ffi.cast("void*", param_data)
             self._autofunc_Exposure(command, param_ptr, size)
 
             if getting:
                 return param_data[0] if deref else param_data
 
-        @Sig('in', 'in', 'inout', 'in')
+        @Sig("in", "in", "inout", "in")
         def Gamma(self, command, param=None):
             if command in (lib.GAMMA_CMD_GET, lib.GAMMA_CMD_GET_DEFAULT):
                 getting = True
@@ -261,15 +299,15 @@ class NiceUC480(NiceLib):
             elif not getting and param is None:
                 raise ValueError("Must give a param value when using a SET command")
 
-            param_data = ffi.new('INT*', param)
-            size = ffi.sizeof('INT')
-            param_ptr = ffi.cast('void*', param_data)
+            param_data = ffi.new("INT*", param)
+            size = ffi.sizeof("INT")
+            param_ptr = ffi.cast("void*", param_data)
             self._autofunc_Gamma(command, param_ptr, size)
 
             if getting:
                 return param_data[0]
 
-        @Sig('in', 'in', 'inout', 'in')
+        @Sig("in", "in", "inout", "in")
         def Blacklevel(self, command, param=None):
             if command in BLACKLEVEL_GET_PARAM_TYPES:
                 param_type = BLACKLEVEL_GET_PARAM_TYPES[command]
@@ -286,17 +324,17 @@ class NiceUC480(NiceLib):
                 raise ValueError("Must give a param value when using a SET command")
 
             param_type = ffi.typeof(param_type)
-            deref = (param_type.kind == 'pointer')  # Don't dereference arrays
+            deref = param_type.kind == "pointer"  # Don't dereference arrays
 
             param_data = ffi.new(param_type, param)
             size = ffi.sizeof(ffi.typeof(param_data).item if deref else param_data)
-            param_ptr = ffi.cast('void*', param_data)
+            param_ptr = ffi.cast("void*", param_data)
             self._autofunc_Blacklevel(command, param_ptr, size)
 
             if getting:
                 return param_data[0] if deref else param_data
 
-        @Sig('in', 'in', 'inout', 'in')
+        @Sig("in", "in", "inout", "in")
         def PixelClock(self, command, param=None):
             if command in PIXELCLOCK_GET_PARAM_TYPES:
                 param_type = PIXELCLOCK_GET_PARAM_TYPES[command]
@@ -313,11 +351,11 @@ class NiceUC480(NiceLib):
                 raise ValueError("Must give a param value when using a SET command")
 
             param_type = ffi.typeof(param_type)
-            deref = (param_type.kind == 'pointer')  # Don't dereference arrays
+            deref = param_type.kind == "pointer"  # Don't dereference arrays
 
             param_data = ffi.new(param_type, param)
             size = ffi.sizeof(ffi.typeof(param_data).item if deref else param_data)
-            param_ptr = ffi.cast('void*', param_data)
+            param_ptr = ffi.cast("void*", param_data)
             self._autofunc_PixelClock(command, param_ptr, size)
 
             if getting:
@@ -327,94 +365,93 @@ class NiceUC480(NiceLib):
 lib = NiceUC480
 
 # Shim to support older versions of uc480.h
-if not hasattr(lib, 'AOI_IMAGE_GET_POS_FAST_SUPPORTED'):
+if not hasattr(lib, "AOI_IMAGE_GET_POS_FAST_SUPPORTED"):
     lib.AOI_IMAGE_GET_POS_FAST_SUPPORTED = lib.AOI_IMAGE_SET_POS_FAST_SUPPORTED
 
 AOI_GET_PARAM_TYPES = {
-    lib.AOI_IMAGE_GET_AOI: 'IS_RECT*',
-    lib.AOI_IMAGE_GET_POS: 'IS_POINT_2D*',
-    lib.AOI_IMAGE_GET_SIZE: 'IS_SIZE_2D*',
-    lib.AOI_IMAGE_GET_POS_MIN: 'IS_POINT_2D*',
-    lib.AOI_IMAGE_GET_SIZE_MIN: 'IS_SIZE_2D*',
-    lib.AOI_IMAGE_GET_POS_MAX: 'IS_POINT_2D*',
-    lib.AOI_IMAGE_GET_SIZE_MAX: 'IS_SIZE_2D*',
-    lib.AOI_IMAGE_GET_POS_INC: 'IS_POINT_2D*',
-    lib.AOI_IMAGE_GET_SIZE_INC: 'IS_SIZE_2D*',
-    lib.AOI_IMAGE_GET_POS_X_ABS: 'UINT*',
-    lib.AOI_IMAGE_GET_POS_Y_ABS: 'UINT*',
-    lib.AOI_IMAGE_GET_ORIGINAL_AOI: 'IS_RECT*',
-    lib.AOI_AUTO_BRIGHTNESS_GET_AOI: 'IS_RECT*',
-    lib.AOI_AUTO_WHITEBALANCE_GET_AOI: 'IS_RECT*',
-    lib.AOI_MULTI_GET_SUPPORTED_MODES: 'UINT*',
-    lib.AOI_SEQUENCE_GET_SUPPORTED: 'UINT*',
-    lib.AOI_SEQUENCE_GET_PARAMS: 'AOI_SEQUENCE_PARAMS*',
-    lib.AOI_SEQUENCE_GET_ENABLE: 'UINT*',
-    lib.AOI_IMAGE_GET_POS_FAST_SUPPORTED: 'UINT*',
+    lib.AOI_IMAGE_GET_AOI: "IS_RECT*",
+    lib.AOI_IMAGE_GET_POS: "IS_POINT_2D*",
+    lib.AOI_IMAGE_GET_SIZE: "IS_SIZE_2D*",
+    lib.AOI_IMAGE_GET_POS_MIN: "IS_POINT_2D*",
+    lib.AOI_IMAGE_GET_SIZE_MIN: "IS_SIZE_2D*",
+    lib.AOI_IMAGE_GET_POS_MAX: "IS_POINT_2D*",
+    lib.AOI_IMAGE_GET_SIZE_MAX: "IS_SIZE_2D*",
+    lib.AOI_IMAGE_GET_POS_INC: "IS_POINT_2D*",
+    lib.AOI_IMAGE_GET_SIZE_INC: "IS_SIZE_2D*",
+    lib.AOI_IMAGE_GET_POS_X_ABS: "UINT*",
+    lib.AOI_IMAGE_GET_POS_Y_ABS: "UINT*",
+    lib.AOI_IMAGE_GET_ORIGINAL_AOI: "IS_RECT*",
+    lib.AOI_AUTO_BRIGHTNESS_GET_AOI: "IS_RECT*",
+    lib.AOI_AUTO_WHITEBALANCE_GET_AOI: "IS_RECT*",
+    lib.AOI_MULTI_GET_SUPPORTED_MODES: "UINT*",
+    lib.AOI_SEQUENCE_GET_SUPPORTED: "UINT*",
+    lib.AOI_SEQUENCE_GET_PARAMS: "AOI_SEQUENCE_PARAMS*",
+    lib.AOI_SEQUENCE_GET_ENABLE: "UINT*",
+    lib.AOI_IMAGE_GET_POS_FAST_SUPPORTED: "UINT*",
 }
 
 AOI_SET_PARAM_TYPES = {
-    lib.AOI_IMAGE_SET_AOI: 'IS_RECT*',
-    lib.AOI_IMAGE_SET_POS: 'IS_POINT_2D*',
-    lib.AOI_IMAGE_SET_SIZE: 'IS_SIZE_2D*',
-    lib.AOI_IMAGE_SET_POS_FAST: 'IS_POINT_2D*',
-    lib.AOI_AUTO_BRIGHTNESS_SET_AOI: 'IS_RECT*',
-    lib.AOI_AUTO_WHITEBALANCE_SET_AOI: 'IS_RECT*',
-
+    lib.AOI_IMAGE_SET_AOI: "IS_RECT*",
+    lib.AOI_IMAGE_SET_POS: "IS_POINT_2D*",
+    lib.AOI_IMAGE_SET_SIZE: "IS_SIZE_2D*",
+    lib.AOI_IMAGE_SET_POS_FAST: "IS_POINT_2D*",
+    lib.AOI_AUTO_BRIGHTNESS_SET_AOI: "IS_RECT*",
+    lib.AOI_AUTO_WHITEBALANCE_SET_AOI: "IS_RECT*",
     # TODO: Implement these commands
-    lib.AOI_MULTI_SET_AOI: '',
-    lib.AOI_MULTI_DISABLE_AOI: '',
-    lib.AOI_SEQUENCE_SET_PARAMS: '',
-    lib.AOI_SEQUENCE_SET_ENABLE: '',
+    lib.AOI_MULTI_SET_AOI: "",
+    lib.AOI_MULTI_DISABLE_AOI: "",
+    lib.AOI_SEQUENCE_SET_PARAMS: "",
+    lib.AOI_SEQUENCE_SET_ENABLE: "",
 }
 
 BLACKLEVEL_GET_PARAM_TYPES = {
-    lib.BLACKLEVEL_CMD_GET_CAPS: 'INT*',
-    lib.BLACKLEVEL_CMD_GET_MODE_DEFAULT: 'INT*',
-    lib.BLACKLEVEL_CMD_GET_MODE: 'INT*',
-    lib.BLACKLEVEL_CMD_GET_OFFSET_DEFAULT: 'INT*',
-    lib.BLACKLEVEL_CMD_GET_OFFSET_RANGE: 'IS_RANGE_S32*',
-    lib.BLACKLEVEL_CMD_GET_OFFSET: 'INT*',
+    lib.BLACKLEVEL_CMD_GET_CAPS: "INT*",
+    lib.BLACKLEVEL_CMD_GET_MODE_DEFAULT: "INT*",
+    lib.BLACKLEVEL_CMD_GET_MODE: "INT*",
+    lib.BLACKLEVEL_CMD_GET_OFFSET_DEFAULT: "INT*",
+    lib.BLACKLEVEL_CMD_GET_OFFSET_RANGE: "IS_RANGE_S32*",
+    lib.BLACKLEVEL_CMD_GET_OFFSET: "INT*",
 }
 
 BLACKLEVEL_SET_PARAM_TYPES = {
-    lib.BLACKLEVEL_CMD_SET_MODE: 'INT*',
-    lib.BLACKLEVEL_CMD_SET_OFFSET: 'INT*',
+    lib.BLACKLEVEL_CMD_SET_MODE: "INT*",
+    lib.BLACKLEVEL_CMD_SET_OFFSET: "INT*",
 }
 
 PIXELCLOCK_GET_PARAM_TYPES = {
-    lib.PIXELCLOCK_CMD_GET_NUMBER: 'UINT*',
-    lib.PIXELCLOCK_CMD_GET_LIST: 'UINT[150]',
-    lib.PIXELCLOCK_CMD_GET_RANGE: 'UINT[3]',
-    lib.PIXELCLOCK_CMD_GET_DEFAULT: 'UINT*',
-    lib.PIXELCLOCK_CMD_GET: 'UINT*',
+    lib.PIXELCLOCK_CMD_GET_NUMBER: "UINT*",
+    lib.PIXELCLOCK_CMD_GET_LIST: "UINT[150]",
+    lib.PIXELCLOCK_CMD_GET_RANGE: "UINT[3]",
+    lib.PIXELCLOCK_CMD_GET_DEFAULT: "UINT*",
+    lib.PIXELCLOCK_CMD_GET: "UINT*",
 }
 
 PIXELCLOCK_SET_PARAM_TYPES = {
-    lib.PIXELCLOCK_CMD_SET: 'UINT*',
+    lib.PIXELCLOCK_CMD_SET: "UINT*",
 }
 
 EXPOSURE_GET_PARAM_TYPES = {
-    lib.IS_EXPOSURE_CMD_GET_CAPS: 'UINT*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_DEFAULT: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MIN: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MAX: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_INC: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE: 'double[3]',
-    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_MIN: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_MAX: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_INC: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE: 'double[3]',
-    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_MIN: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_MAX: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_INC: 'double*',
-    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE: 'double[3]',
-    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_ENABLE: 'UINT*',
+    lib.IS_EXPOSURE_CMD_GET_CAPS: "UINT*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_DEFAULT: "double*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE: "double*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MIN: "double*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MAX: "double*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_INC: "double*",
+    lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE: "double[3]",
+    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_MIN: "double*",
+    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_MAX: "double*",
+    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE_INC: "double*",
+    lib.IS_EXPOSURE_CMD_GET_FINE_INCREMENT_RANGE: "double[3]",
+    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_MIN: "double*",
+    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_MAX: "double*",
+    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE_INC: "double*",
+    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_RANGE: "double[3]",
+    lib.IS_EXPOSURE_CMD_GET_LONG_EXPOSURE_ENABLE: "UINT*",
 }
 
 EXPOSURE_SET_PARAM_TYPES = {
-    lib.IS_EXPOSURE_CMD_SET_EXPOSURE: 'double*',
-    lib.IS_EXPOSURE_CMD_SET_LONG_EXPOSURE_ENABLE: 'UINT*',
+    lib.IS_EXPOSURE_CMD_SET_EXPOSURE: "double*",
+    lib.IS_EXPOSURE_CMD_SET_LONG_EXPOSURE_ENABLE: "UINT*",
 }
 
 SUBSAMP_V_CODE_FROM_NUM = {
@@ -446,7 +483,7 @@ BIN_V_CODE_FROM_NUM = {
     5: lib.BINNING_5X_VERTICAL,
     6: lib.BINNING_6X_VERTICAL,
     8: lib.BINNING_8X_VERTICAL,
-    16: lib.BINNING_16X_VERTICAL
+    16: lib.BINNING_16X_VERTICAL,
 }
 BIN_H_CODE_FROM_NUM = {
     1: lib.BINNING_DISABLE,
@@ -456,7 +493,7 @@ BIN_H_CODE_FROM_NUM = {
     5: lib.BINNING_5X_HORIZONTAL,
     6: lib.BINNING_6X_HORIZONTAL,
     8: lib.BINNING_8X_HORIZONTAL,
-    16: lib.BINNING_16X_HORIZONTAL
+    16: lib.BINNING_16X_HORIZONTAL,
 }
 
 
@@ -473,14 +510,14 @@ def camera_info_list():
     if not num_cams:
         return []
 
-    n_bytes = ffi.sizeof('DWORD') + num_cams * ffi.sizeof('UC480_CAMERA_INFO')
-    mem = ffi.new('BYTE[]', n_bytes)
-    cam_list_struct = ffi.cast('UC480_CAMERA_LIST*', mem)
+    n_bytes = ffi.sizeof("DWORD") + num_cams * ffi.sizeof("UC480_CAMERA_INFO")
+    mem = ffi.new("BYTE[]", n_bytes)
+    cam_list_struct = ffi.cast("UC480_CAMERA_LIST*", mem)
     cam_list_struct.dwCount = num_cams
 
     lib.GetCameraList(cam_list_struct)
 
-    info_list = ffi.cast('UC480_CAMERA_INFO[%d]' % num_cams, cam_list_struct.uci)
+    info_list = ffi.cast("UC480_CAMERA_INFO[%d]" % num_cams, cam_list_struct.uci)
     global_weakkeydict[info_list] = mem  # Keep mem from being cleaned up
     return info_list
 
@@ -502,16 +539,18 @@ def _cameras():
 
     if not repeated:
         for info in cam_list:
-            params = ParamSet(UC480_Camera,
-                              serial=ffi.string(info.SerNo),
-                              model=ffi.string(info.Model),
-                              id=int(info.dwCameraID))
+            params = ParamSet(
+                UC480_Camera,
+                serial=ffi.string(info.SerNo),
+                model=ffi.string(info.Model),
+                id=int(info.dwCameraID),
+            )
             cams.append(params)
 
     else:
         log.info("Some cameras have duplicate IDs. Uniquifying IDs now...")
         # Choose IDs that haven't been used yet
-        potential_ids = [i for i in range(1, len(ids)+1) if i not in ids]
+        potential_ids = [i for i in range(1, len(ids) + 1) if i not in ids]
         for id in repeated:
             new_id = potential_ids.pop(0)
             log.info("Trying to set id from {} to {}".format(id, new_id))
@@ -552,8 +591,9 @@ def _get_legit_params(params):
 
 
 def AutoParamEnableFacet(name, doc=None):
-    GET_CMD = getattr(lib, 'GET_ENABLE_' + name)
-    SET_CMD = getattr(lib, 'SET_ENABLE_' + name)
+    GET_CMD = getattr(lib, "GET_ENABLE_" + name)
+    SET_CMD = getattr(lib, "SET_ENABLE_" + name)
+
     def fget(self):
         val1, val2 = self._dev.SetAutoParameter(GET_CMD, 0, 0)
         return bool(val1)
@@ -572,6 +612,7 @@ class BufferInfo(object):
 
 class UC480_Camera(Camera):
     """A uc480-supported Camera"""
+
     DEFAULT_KWDS = Camera.DEFAULT_KWDS.copy()
     DEFAULT_KWDS.update(vsub=1, hsub=1)
 
@@ -597,9 +638,9 @@ class UC480_Camera(Camera):
         model : str, optional
             The model of the camera
         """
-        self._id = int(self._paramset['id'])
-        self._serial = self._paramset['serial']
-        self._model = self._paramset['model']
+        self._id = int(self._paramset["id"])
+        self._serial = self._paramset["serial"]
+        self._model = self._paramset["model"]
 
         self.is_open = False
         self._width, self._height = 0, 0
@@ -615,7 +656,9 @@ class UC480_Camera(Camera):
         self.open()
 
     def _load_constants(self):
-        self._max_master_gain = self._dev.SetHWGainFactor(lib.INQUIRE_MASTER_GAIN_FACTOR, 100) / 100.
+        self._max_master_gain = (
+            self._dev.SetHWGainFactor(lib.INQUIRE_MASTER_GAIN_FACTOR, 100) / 100.0
+        )
 
         offset_range = self._dev.Blacklevel(lib.BLACKLEVEL_CMD_GET_OFFSET_RANGE)
         self._blacklevel_offset_min = offset_range.s32Min
@@ -642,25 +685,20 @@ class UC480_Camera(Camera):
         """
         if filename is None:
             cmd = lib.PARAMETERSET_CMD_LOAD_EEPROM
-            param = ffi.new('char[]', b'/cam/set1')
+            param = ffi.new("char[]", b"/cam/set1")
         else:
             cmd = lib.PARAMETERSET_CMD_LOAD_FILE
-            param = ffi.new('wchar_t[]', filename)
+            param = ffi.new("wchar_t[]", filename)
 
         self._dev.ParameterSet(cmd, param, ffi.sizeof(param))
         self._init_colormode()  # Ignore loaded color mode b/c we only support a few
 
         # Make sure memory is set up for right color depth
-        depth_map = {
-            lib.CM_MONO8: 8,
-            lib.CM_RGBA8_PACKED: 32,
-            lib.CM_BGRA8_PACKED: 32
-        }
+        depth_map = {lib.CM_MONO8: 8, lib.CM_RGBA8_PACKED: 32, lib.CM_BGRA8_PACKED: 32}
         mode = self._dev.SetColorMode(lib.GET_COLOR_MODE)
         depth = depth_map[mode]
         if depth != self._color_depth:
-            log.debug("Color depth changed from %s to %s",
-                      self._color_depth, depth)
+            log.debug("Color depth changed from %s to %s", self._color_depth, depth)
             num_bufs = len(self._buffers)
             self._free_image_mem_seq()
             self._color_depth = depth
@@ -668,7 +706,7 @@ class UC480_Camera(Camera):
         self._color_mode = mode
 
     def open(self, num_bufs=1, force=False):
-        """ Connect to the camera and set up the image memory.
+        """Connect to the camera and set up the image memory.
 
         Parameters
         ----------
@@ -682,14 +720,16 @@ class UC480_Camera(Camera):
         self._dev = lib.Camera(self._id, ffi.NULL)
         self.is_open = True
         self._refresh_sizes()
-        log.debug('image width=%d, height=%d', self.width, self.height)
+        log.debug("image width=%d, height=%d", self.width, self.height)
 
         self._init_colormode()
         self._set_AOI(0, 0, self._width, self._height)
         self._allocate_mem_seq(num_bufs)
 
-        self._seq_event = win32event.CreateEvent(None, False, False, '')
-        self._frame_event = win32event.CreateEvent(None, True, False, '')  # Don't auto-reset
+        self._seq_event = win32event.CreateEvent(None, False, False, "")
+        self._frame_event = win32event.CreateEvent(
+            None, True, False, ""
+        )  # Don't auto-reset
         self._dev.InitEvent(self._seq_event.handle, lib.SET_EVENT_SEQ)
         self._dev.InitEvent(self._frame_event.handle, lib.SET_EVENT_FRAME)
 
@@ -700,7 +740,7 @@ class UC480_Camera(Camera):
         sensor_mode = self._get_sensor_color_mode()
         mode_map = {
             lib.COLORMODE_MONOCHROME: (lib.CM_MONO8, 8),
-            lib.COLORMODE_BAYER: (lib.CM_RGBA8_PACKED, 32)
+            lib.COLORMODE_BAYER: (lib.CM_RGBA8_PACKED, 32),
         }
         try:
             mode, depth = mode_map[sensor_mode]
@@ -709,7 +749,7 @@ class UC480_Camera(Camera):
 
         self._color_mode = mode
         self._color_depth = depth
-        log.debug('color_depth=%d, color_mode=%d', depth, mode)
+        log.debug("color_depth=%d, color_mode=%d", depth, mode)
 
         self._dev.SetColorMode(self._color_mode)
 
@@ -722,7 +762,9 @@ class UC480_Camera(Camera):
     def _allocate_mem_seq(self, num_bufs):
         """Create and setup the image memory for live capture."""
         for i in range(num_bufs):
-            p_img_mem, memid = self._dev.AllocImageMem(self._width, self._height, self._color_depth)
+            p_img_mem, memid = self._dev.AllocImageMem(
+                self._width, self._height, self._color_depth
+            )
             self._dev.AddToSequence(p_img_mem, memid)
             self._buffers.append(BufferInfo(p_img_mem, memid))
 
@@ -753,7 +795,7 @@ class UC480_Camera(Camera):
 
     def _bytes_per_line(self):
         pitch = self._dev.GetImageMemPitch()
-        log.debug('bytes_per_line=%d', pitch)
+        log.debug("bytes_per_line=%d", pitch)
         return pitch
 
     def _get_max_img_size(self):
@@ -771,13 +813,13 @@ class UC480_Camera(Camera):
 
         if self._color_mode == lib.CM_RGBA8_PACKED:
             w = self.bytes_per_line // 4
-            arr = arr.reshape((h, w, 4), order='C')[:,:,:3]
+            arr = arr.reshape((h, w, 4), order="C")[:, :, :3]
         elif self._color_mode == lib.CM_BGRA8_PACKED:
             w = self.bytes_per_line // 4
-            arr = arr.reshape((h, w, 4), order='C')[:, :, 2::-1]
+            arr = arr.reshape((h, w, 4), order="C")[:, :, 2::-1]
         elif self._color_mode == lib.CM_MONO8:
             w = self.bytes_per_line
-            arr = arr.reshape((h, w), order='C')
+            arr = arr.reshape((h, w), order="C")
         else:
             raise Error("Unsupported color mode!")
         return arr
@@ -807,18 +849,18 @@ class UC480_Camera(Camera):
     def start_capture(self, **kwds):
         self._handle_kwds(kwds, fill_coords=False)
 
-        self._set_binning(kwds['vbin'], kwds['hbin'])
-        self._set_subsampling(kwds['vsub'], kwds['hsub'])
+        self._set_binning(kwds["vbin"], kwds["hbin"])
+        self._set_subsampling(kwds["vsub"], kwds["hsub"])
         self._refresh_sizes()
 
         # Fill coords now b/c max width/height may have changed
         self._handle_kwds(kwds, fill_coords=True)
-        self._set_AOI(kwds['left'], kwds['top'], kwds['right'], kwds['bot'])
-        self._set_exposure(kwds['exposure_time'])
-        self._set_gain(kwds['gain'])
+        self._set_AOI(kwds["left"], kwds["top"], kwds["right"], kwds["bot"])
+        self._set_exposure(kwds["exposure_time"])
+        self._set_gain(kwds["gain"])
 
         self._free_image_mem_seq()
-        self._allocate_mem_seq(kwds['n_frames'])
+        self._allocate_mem_seq(kwds["n_frames"])
 
         self._set_queueing(True)  # Use queue instead of ring buffer for finite sequence
 
@@ -829,9 +871,9 @@ class UC480_Camera(Camera):
         self._dev.EnableEvent(lib.SET_EVENT_SEQ)
         self._dev.CaptureVideo(lib.DONT_WAIT)  # Trigger
 
-    @check_units(timeout='ms')
-    def get_captured_image(self, timeout='1s', copy=True):
-        ret = win32event.WaitForSingleObject(self._seq_event, int(timeout.m_as('ms')))
+    @check_units(timeout="ms")
+    def get_captured_image(self, timeout="1s", copy=True):
+        ret = win32event.WaitForSingleObject(self._seq_event, int(timeout.m_as("ms")))
         self._dev.DisableEvent(lib.SET_EVENT_SEQ)
 
         if ret == win32event.WAIT_TIMEOUT:
@@ -853,30 +895,30 @@ class UC480_Camera(Camera):
         else:
             return tuple(arrays)
 
-    def grab_image(self, timeout='1s', copy=True, **kwds):
+    def grab_image(self, timeout="1s", copy=True, **kwds):
         self.start_capture(**kwds)
         return self.get_captured_image(timeout=timeout, copy=copy)
 
-    @check_units(framerate='?Hz')
+    @check_units(framerate="?Hz")
     def start_live_video(self, framerate=None, **kwds):
         self._handle_kwds(kwds, fill_coords=False)
 
-        self._set_binning(kwds['vbin'], kwds['hbin'])
-        self._set_subsampling(kwds['vsub'], kwds['hsub'])
+        self._set_binning(kwds["vbin"], kwds["hbin"])
+        self._set_subsampling(kwds["vsub"], kwds["hsub"])
         self._refresh_sizes()
 
         # Fill coords now b/c max width/height may have changed
         self._handle_kwds(kwds, fill_coords=True)
-        self._set_AOI(kwds['left'], kwds['top'], kwds['right'], kwds['bot'])
+        self._set_AOI(kwds["left"], kwds["top"], kwds["right"], kwds["bot"])
 
         # Framerate should be set *before* exposure time
         if framerate is None:
             # This is necessary to ensure that the exposure_time is within the reachable range
-            framerate = 1/Q_(kwds['exposure_time'])
-        self._dev.SetFrameRate(framerate.m_as('Hz'))
+            framerate = 1 / Q_(kwds["exposure_time"])
+        self._dev.SetFrameRate(framerate.m_as("Hz"))
 
-        self._set_exposure(kwds['exposure_time'])
-        self._set_gain(kwds['gain'])
+        self._set_exposure(kwds["exposure_time"])
+        self._set_gain(kwds["gain"])
 
         self._free_image_mem_seq()
         self._allocate_mem_seq(num_bufs=2)
@@ -891,16 +933,18 @@ class UC480_Camera(Camera):
         self._dev.StopLiveVideo(lib.WAIT)
         self._dev.DisableEvent(lib.SET_EVENT_FRAME)
 
-    @check_units(timeout='?ms')
+    @check_units(timeout="?ms")
     def wait_for_frame(self, timeout=None):
-        timeout_ms = win32event.INFINITE if timeout is None else int(timeout.m_as('ms'))
+        timeout_ms = win32event.INFINITE if timeout is None else int(timeout.m_as("ms"))
         ret = win32event.WaitForSingleObject(self._frame_event, timeout_ms)
         win32event.ResetEvent(self._frame_event)
 
         if ret == win32event.WAIT_TIMEOUT:
             return False
         elif ret != win32event.WAIT_OBJECT_0:
-            raise Error("Failed to grab image: Windows event return code 0x{:x}".format(ret))
+            raise Error(
+                "Failed to grab image: Windows event return code 0x{:x}".format(ret)
+            )
 
         return True
 
@@ -915,20 +959,20 @@ class UC480_Camera(Camera):
         return rect.s32X, rect.s32Y, rect.s32Width, rect.s32Height
 
     def _set_AOI(self, x0, y0, x1, y1):
-        self._dev.AOI(lib.AOI_IMAGE_SET_AOI, (x0, y0, x1-x0, y1-y0))
+        self._dev.AOI(lib.AOI_IMAGE_SET_AOI, (x0, y0, x1 - x0, y1 - y0))
         self._refresh_sizes()
 
     def _refresh_sizes(self):
         _, _, self._width, self._height = self._get_AOI()
         self._max_width, self._max_height = self._get_max_img_size()
 
-    @check_units(exp_time='ms')
+    @check_units(exp_time="ms")
     def _set_exposure(self, exp_time):
-        self._dev.Exposure(lib.IS_EXPOSURE_CMD_SET_EXPOSURE, exp_time.m_as('ms'))
+        self._dev.Exposure(lib.IS_EXPOSURE_CMD_SET_EXPOSURE, exp_time.m_as("ms"))
 
     def _get_exposure(self):
         exp_ms = self._dev.Exposure(lib.IS_EXPOSURE_CMD_GET_EXPOSURE)
-        return Q_(exp_ms, 'ms')
+        return Q_(exp_ms, "ms")
 
     @Facet
     def exposure(self):
@@ -937,17 +981,17 @@ class UC480_Camera(Camera):
     @exposure.setter
     def exposure(self, exposure):
         if isinstance(exposure, float):
-            exposure = Q_(exposure, 'ms')
+            exposure = Q_(exposure, "ms")
         self._set_exposure(exposure)
 
     def _get_exposure_range(self):
         exp_ms_min = self._dev.Exposure(lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MIN)
         exp_ms_max = self._dev.Exposure(lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_MAX)
-        return Q_(exp_ms_min, 'ms'), Q_(exp_ms_max, 'ms')
+        return Q_(exp_ms_min, "ms"), Q_(exp_ms_max, "ms")
 
     def _get_exposure_inc(self):
         inc_ms = self._dev.Exposure(lib.IS_EXPOSURE_CMD_GET_EXPOSURE_RANGE_INC)
-        return Q_(inc_ms, 'ms')
+        return Q_(inc_ms, "ms")
 
     def _get_gain(self):
         ignore = lib.IGNORE_PARAMETER
@@ -965,12 +1009,12 @@ class UC480_Camera(Camera):
 
     def _color_mode_string(self):
         MAP = {
-            lib.CM_MONO8: 'mono8',
-            lib.CM_MONO16: 'mono16',
+            lib.CM_MONO8: "mono8",
+            lib.CM_MONO16: "mono16",
         }
         return MAP.get(self._color_mode)
 
-    def set_trigger(self, mode='software', edge='rising'):
+    def set_trigger(self, mode="software", edge="rising"):
         """Set the camera trigger mode.
 
         Parameters
@@ -980,23 +1024,29 @@ class UC480_Camera(Camera):
         edge : string
             Hardware trigger is either on the 'rising'(default) or 'falling' edge.
         """
-        if mode == 'off':
+        if mode == "off":
             new_mode = lib.SET_TRIGGER_OFF
-        elif mode == 'software':
+        elif mode == "software":
             new_mode = lib.SET_TRIGGER_SOFTWARE
-        elif mode == 'hardware':
-            if edge == 'rising':
+        elif mode == "hardware":
+            if edge == "rising":
                 new_mode = lib.SET_TRIGGER_LO_HI
-            elif edge == 'falling':
+            elif edge == "falling":
                 new_mode = lib.SET_TRIGGER_HI_LO
             else:
-                raise Error("Trigger edge value {} must be either 'rising' or 'falling'".format(edge))
+                raise Error(
+                    "Trigger edge value {} must be either 'rising' or 'falling'".format(
+                        edge
+                    )
+                )
         else:
             raise Error("Unrecognized trigger mode {}".format(mode))
 
         ret = lib.is_SetExternalTrigger(self._id, new_mode)
         if ret != lib.SUCCESS:
-            raise Error("Failed to set external trigger. Return code 0x{:x}".format(ret))
+            raise Error(
+                "Failed to set external trigger. Return code 0x{:x}".format(ret)
+            )
         else:
             self._trigger_mode = new_mode
 
@@ -1011,11 +1061,11 @@ class UC480_Camera(Camera):
         self._trigger_mode = self._dev.SetExternalTrigger(lib.GET_EXTERNALTRIGGER)
 
         if self._trigger_mode == lib.SET_TRIGGER_OFF:
-            return 'off'
+            return "off"
         if self._trigger_mode == lib.SET_TRIGGER_SOFTWARE:
-            return 'software'
+            return "software"
         else:
-            return 'hardware'
+            return "hardware"
 
     def get_trigger_level(self):
         """Get the current hardware trigger level.
@@ -1027,7 +1077,7 @@ class UC480_Camera(Camera):
         """
         return self._dev.SetExternalTrigger(lib.GET_TRIGGER_STATUS)
 
-    @check_units(delay='?us')
+    @check_units(delay="?us")
     def set_trigger_delay(self, delay):
         """Set the time to delay a hardware trigger.
 
@@ -1037,7 +1087,7 @@ class UC480_Camera(Camera):
             The delay time after trigger signal is received to trigger the camera. Has microsecond
             resolution.
         """
-        delay_us = 0 if delay is None else int(delay.m_as('us'))
+        delay_us = 0 if delay is None else int(delay.m_as("us"))
         self._dev.SetTriggerDelay(delay_us)
 
     def get_trigger_delay(self):
@@ -1049,7 +1099,7 @@ class UC480_Camera(Camera):
             Trigger delay
         """
         param = self._dev.SetTriggerDelay(lib.GET_TRIGGER_DELAY)
-        return Q_(param, 'us')
+        return Q_(param, "us")
 
     @Facet
     def auto_blacklevel(self):
@@ -1066,7 +1116,13 @@ class UC480_Camera(Camera):
         mode = lib.AUTO_BLACKLEVEL_ON if enable else lib.AUTO_BLACKLEVEL_OFF
         self._dev.Blacklevel(lib.BLACKLEVEL_CMD_SET_MODE, mode)
 
-    @Facet(limits=('_blacklevel_offset_min', '_blacklevel_offset_max', '_blacklevel_offset_inc'))
+    @Facet(
+        limits=(
+            "_blacklevel_offset_min",
+            "_blacklevel_offset_max",
+            "_blacklevel_offset_inc",
+        )
+    )
     def blacklevel_offset(self):
         """The blacklevel offset value (an int)"""
         return self._dev.Blacklevel(lib.BLACKLEVEL_CMD_GET_OFFSET)
@@ -1075,7 +1131,7 @@ class UC480_Camera(Camera):
     def blacklevel_offset(self, offset):
         self._dev.Blacklevel(lib.BLACKLEVEL_CMD_SET_OFFSET, offset)
 
-    @Facet(type=int, units='MHz')
+    @Facet(type=int, units="MHz")
     def pixelclock(self):
         return self._dev.PixelClock(lib.PIXELCLOCK_CMD_GET)
 
@@ -1087,14 +1143,14 @@ class UC480_Camera(Camera):
     def pixelclock(self, clock):
         self._dev.PixelClock(lib.PIXELCLOCK_CMD_SET, clock)
 
-    @Facet(units='MHz')
+    @Facet(units="MHz")
     def pixelclock_default(self):
         return self._dev.PixelClock(lib.PIXELCLOCK_CMD_GET_DEFAULT)
 
     @Facet(limits=(1.0, 10.0))
     def gamma(self):
         """The gamma correction value (1.0-10.0)"""
-        return self._dev.Gamma(lib.GAMMA_CMD_GET) / 100.
+        return self._dev.Gamma(lib.GAMMA_CMD_GET) / 100.0
 
     @gamma.setter
     def gamma(self, gamma):
@@ -1118,55 +1174,50 @@ class UC480_Camera(Camera):
         # For some reason, this does not take effect on the next image captured, but the
         # image after that. It is unclear what's causing this.
         if not self._dev.SetGainBoost(lib.GET_SUPPORTED_GAINBOOST):
-            raise UnsupportedFeatureError("Camera does not support the gain boost feature")
+            raise UnsupportedFeatureError(
+                "Camera does not support the gain boost feature"
+            )
         val = lib.SET_GAINBOOST_ON if boost else lib.SET_GAINBOOST_OFF
         self._dev.SetGainBoost(val)
 
-    @Facet(limits=(1.0, 'max_master_gain'))
+    @Facet(limits=(1.0, "max_master_gain"))
     def master_gain(self):
         """The master gain factor; 1.0 is the lowest gain."""
         gain_factor = self._dev.SetHWGainFactor(lib.GET_MASTER_GAIN_FACTOR, 0)
-        return gain_factor / 100.
+        return gain_factor / 100.0
 
     @master_gain.setter
     def master_gain(self, gain):
         gain_factor = int(round(gain * 100))
         self._dev.SetHWGainFactor(lib.SET_MASTER_GAIN_FACTOR, gain_factor)
 
-    max_master_gain = property(lambda self: self._max_master_gain,
-                               doc="Max value that ``master_gain`` can take")
-
-    auto_gain = AutoParamEnableFacet(
-        'AUTO_GAIN',
-        doc="Whether auto gain is enabled"
+    max_master_gain = property(
+        lambda self: self._max_master_gain,
+        doc="Max value that ``master_gain`` can take",
     )
+
+    auto_gain = AutoParamEnableFacet("AUTO_GAIN", doc="Whether auto gain is enabled")
     auto_sensor_gain = AutoParamEnableFacet(
-        'AUTO_SENSOR_GAIN',
-        doc="Whether sensor-based auto gain is enabled"
+        "AUTO_SENSOR_GAIN", doc="Whether sensor-based auto gain is enabled"
     )
     auto_exposure = AutoParamEnableFacet(
-        'AUTO_SHUTTER',
-        doc="Whether auto exposure is enabled"
+        "AUTO_SHUTTER", doc="Whether auto exposure is enabled"
     )
     auto_sensor_exposure = AutoParamEnableFacet(
-        'AUTO_SENSOR_SHUTTER',
-        doc="Whether sensor-based auto exposure is enabled"
+        "AUTO_SENSOR_SHUTTER", doc="Whether sensor-based auto exposure is enabled"
     )
     auto_whitebalance = AutoParamEnableFacet(
-        'AUTO_WHITEBALANCE',
-        doc="Whether auto whitebalance is enabled"
+        "AUTO_WHITEBALANCE", doc="Whether auto whitebalance is enabled"
     )
     auto_sensor_whitebalance = AutoParamEnableFacet(
-        'AUTO_SENSOR_WHITEBALANCE',
-        doc="Whether sensor-based auto whitebalance is enabled"
+        "AUTO_SENSOR_WHITEBALANCE",
+        doc="Whether sensor-based auto whitebalance is enabled",
     )
     auto_framerate = AutoParamEnableFacet(
-        'AUTO_FRAMERATE',
-        doc="Whether auto framerate is enabled"
+        "AUTO_FRAMERATE", doc="Whether auto framerate is enabled"
     )
     auto_sensor_framerate = AutoParamEnableFacet(
-        'AUTO_SENSOR_FRAMERATE',
-        doc="Whether sensor-based auto framerate is enabled"
+        "AUTO_SENSOR_FRAMERATE", doc="Whether sensor-based auto framerate is enabled"
     )
 
     #: uEye camera ID number. Read-only
@@ -1196,4 +1247,6 @@ class UC480_Camera(Camera):
     trigger_mode = property(lambda self: self._get_trigger())
 
     #: Current framerate, in ``[time]⁻¹`` units. Read-only
-    framerate = property(lambda self: Q_(self._dev.SetFrameRate(lib.GET_FRAMERATE), 'Hz'))
+    framerate = property(
+        lambda self: Q_(self._dev.SetFrameRate(lib.GET_FRAMERATE), "Hz")
+    )

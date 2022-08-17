@@ -3,29 +3,29 @@
 from nicelib import build_lib
 
 header_info = {
-    'win*': {
-        'path': (
+    "win*": {
+        "path": (
             r"{PROGRAMFILES(X86)}\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include",
             r"{PROGRAMFILES}\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include",
         ),
-        'header': 'NIDAQmx.h'
+        "header": "NIDAQmx.h",
     },
-    'linux*': {
-        'path': '/usr/local/natinst/nidaqmxbase/include',
-        'header': 'NIDAQmxBase.h'
+    "linux*": {
+        "path": "/usr/local/natinst/nidaqmxbase/include",
+        "header": "NIDAQmxBase.h",
     },
-    'darwin*': {
-        'path': '/Applications/National Instruments/NI-DAQmx Base/includes',
-        'header': 'NIDAQmxBase.h'
+    "darwin*": {
+        "path": "/Applications/National Instruments/NI-DAQmx Base/includes",
+        "header": "NIDAQmxBase.h",
     },
 }
 
-lib_names = {'win*': 'nicaiu', 'linux*': 'nidaqmxbase', 'darwin*': 'nidaqmxbase'}
+lib_names = {"win*": "nicaiu", "linux*": "nidaqmxbase", "darwin*": "nidaqmxbase"}
 
 
 def build():
-    build_lib(header_info, lib_names, '_nilib', __file__)
+    build_lib(header_info, lib_names, "_nilib", __file__)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     build()

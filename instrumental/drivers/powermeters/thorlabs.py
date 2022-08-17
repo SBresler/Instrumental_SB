@@ -13,33 +13,39 @@ from ... import Q_
 
 class PM100D(PowerMeter, VisaMixin):
     """A Thorlabs PM100D series power meter"""
-    _INST_PARAMS_ = ['visa_address']
-    _INST_VISA_INFO_ = ('Thorlabs', ['PM100D'])
 
-    @deprecated('power')
+    _INST_PARAMS_ = ["visa_address"]
+    _INST_VISA_INFO_ = ("Thorlabs", ["PM100D"])
+
+    @deprecated("power")
     def get_power(self):
         return self.power
 
-    @deprecated('range')
+    @deprecated("range")
     def get_range(self):
         return self.range
 
-    @deprecated('auto_range')
+    @deprecated("auto_range")
     def enable_auto_range(self, enable=True):
         self.auto_range = enable
 
-    @deprecated('auto_range')
+    @deprecated("auto_range")
     def disable_auto_range(self):
         self.auto_range = False
 
-    @deprecated('auto_range')
+    @deprecated("auto_range")
     def auto_range_enabled(self):
         return self.auto_range
 
-    range = SCPI_Facet('power:dc:range', units='W', convert=float, readonly=True,
-                       doc="The current input range's max power")
+    range = SCPI_Facet(
+        "power:dc:range",
+        units="W",
+        convert=float,
+        readonly=True,
+        doc="The current input range's max power",
+    )
 
-    @deprecated('wavelength')
+    @deprecated("wavelength")
     def get_wavelength(self):
         """Get the input signal wavelength setting
 
@@ -48,10 +54,10 @@ class PM100D(PowerMeter, VisaMixin):
         wavelength : Quantity
             the input signal wavelength in units of [length]
         """
-        val = float(self._rsrc.query('sense:correction:wav?'))
-        return Q_(val, 'nm')
+        val = float(self._rsrc.query("sense:correction:wav?"))
+        return Q_(val, "nm")
 
-    @deprecated('wavelength')
+    @deprecated("wavelength")
     def set_wavelength(self, wavelength):
         """Set the input signal wavelength setting
 
@@ -60,10 +66,10 @@ class PM100D(PowerMeter, VisaMixin):
         wavelength : Quantity
             the input signal wavelength in units of [length]
         """
-        wav_nm = Q_(wavelength).to('nm').magnitude
-        self.write('sense:correction:wav {}', wav_nm)
+        wav_nm = Q_(wavelength).to("nm").magnitude
+        self.write("sense:correction:wav {}", wav_nm)
 
-    @deprecated('num_averaged')
+    @deprecated("num_averaged")
     def get_num_averaged(self):
         """Get the number of samples to average
 
@@ -72,10 +78,10 @@ class PM100D(PowerMeter, VisaMixin):
         num_averaged : int
             number of samples that are averaged
         """
-        val = int(self._rsrc.query('sense:average:count?'))
+        val = int(self._rsrc.query("sense:average:count?"))
         return val
 
-    @deprecated('num_averaged')
+    @deprecated("num_averaged")
     def set_num_averaged(self, num_averaged):
         """Set the number of samples to average
 
@@ -88,16 +94,22 @@ class PM100D(PowerMeter, VisaMixin):
             number of samples to average
         """
         val = int(num_averaged)
-        self.write('sense:average:count {}', val)
+        self.write("sense:average:count {}", val)
 
-    auto_range = SCPI_Facet('power:dc:range:auto', convert=int, value={False:0, True:1},
-                            doc="Whether auto-ranging is enabled")
+    auto_range = SCPI_Facet(
+        "power:dc:range:auto",
+        convert=int,
+        value={False: 0, True: 1},
+        doc="Whether auto-ranging is enabled",
+    )
 
-    wavelength = SCPI_Facet('sense:corr:wav', units='nm', type=float,
-                            doc="Input signal wavelength")
+    wavelength = SCPI_Facet(
+        "sense:corr:wav", units="nm", type=float, doc="Input signal wavelength"
+    )
 
-    num_averaged = SCPI_Facet('sense:average:count', type=int,
-                              doc="Number of samples to average")
+    num_averaged = SCPI_Facet(
+        "sense:average:count", type=int, doc="Number of samples to average"
+    )
 
     def close(self):
         self._rsrc.control_ren(False)  # Disable remote mode
@@ -107,11 +119,11 @@ class PM100D(PowerMeter, VisaMixin):
     def _close_resource(resource):
         resource.control_ren(False)  # Disable remote mode
 
-    @Facet(units='W', cached=False)
+    @Facet(units="W", cached=False)
     def power(self):
         """The measured optical power"""
-        self.write('power:dc:unit W')
-        return float(self.query('measure:power?'))
+        self.write("power:dc:unit W")
+        return float(self.query("measure:power?"))
 
     def measure(self, n_samples=100):
         """Make a multi-sample power measurement
@@ -128,11 +140,11 @@ class PM100D(PowerMeter, VisaMixin):
         """
         n_avg = self.get_num_averaged()  # Save for later
         self.set_num_averaged(1)
-        self.write('power:dc:unit W')
+        self.write("power:dc:unit W")
 
-        raw_arr = numpy.empty((n_samples,), dtype='f')
+        raw_arr = numpy.empty((n_samples,), dtype="f")
         for i in range(n_samples):
-            raw_arr[i] = float(self.query('measure:power?'))
+            raw_arr[i] = float(self.query("measure:power?"))
         self.set_num_averaged(n_avg)
 
-        return Q_(raw_arr.mean(), 'W').plus_minus(raw_arr.std())
+        return Q_(raw_arr.mean(), "W").plus_minus(raw_arr.std())

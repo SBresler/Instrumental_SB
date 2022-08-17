@@ -5,27 +5,23 @@ Copyright 2016 Christopher Rogers
 from nicelib import build_lib
 
 header_info = {
-    'win*': {
-        'path': (
-            r"{PROGRAMFILES}\Princeton Instruments\PICam\Includes",
-        ),
-        'header': 'picam.h'
+    "win*": {
+        "path": (r"{PROGRAMFILES}\Princeton Instruments\PICam\Includes",),
+        "header": "picam.h",
     },
-    'linux*': {
-        'path': '/opt/PrincetonInstruments/picam/includes',
-        'header': 'picam.h'
-    },
+    "linux*": {"path": "/opt/PrincetonInstruments/picam/includes", "header": "picam.h"},
 }
 
 # lib_names = {'win*': r"{PROGRAMFILES}\Princeton Instruments\PICam\Runtime\Picam.dll",}
 lib_names = {
-    'win*': r"Picam.dll",
-    'linux*': 'picam',
+    "win*": r"Picam.dll",
+    "linux*": "picam",
 }
 
+
 def build():
-        build_lib(header_info, lib_names, '_picamlib', __file__,
-                  hook_groups=('C++'))
+    build_lib(header_info, lib_names, "_picamlib", __file__, hook_groups=("C++"))
+
 
 """
 fname = 'wrapper.py'

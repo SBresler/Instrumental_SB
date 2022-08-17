@@ -46,7 +46,7 @@ def list_instruments():
         return paramsets
 
     for spec in raw_spec_list:
-        _, _, model, serial, _ = spec.split('::', 4)
+        _, _, model, serial, _ = spec.split("::", 4)
         model = SpecTypes(int(model, 0))
         paramsets.append(ParamSet(CCS, usb=spec, serial=serial, model=model))
     return paramsets
@@ -67,40 +67,45 @@ def ccs_errcheck(error_code, niceobj):
 
 class NiceCCSLib(NiceLib):
     """Mid-level wrapper for TLCCS_XX.dll"""
-    _info_ = load_lib('tlccs', __package__)
-    _prefix_ = 'tlccs_'
+
+    _info_ = load_lib("tlccs", __package__)
+    _prefix_ = "tlccs_"
     _buflen_ = 256
     _ret_ = ccs_errcheck
 
-    init = Sig('in', 'in', 'in', 'out')
-    error_message = Sig('in', 'in', 'buf[512]')
+    init = Sig("in", "in", "in", "out")
+    error_message = Sig("in", "in", "buf[512]")
 
     class NiceCCS(NiceObject):
-        close = Sig('in')
-        setIntegrationTime = Sig('in', 'in')
-        getIntegrationTime = Sig('in', 'out')
-        startScan = Sig('in')
-        startScanCont = Sig('in')
-        startScanExtTrg = Sig('in')
-        startScanContExtTrg = Sig('in')
-        getDeviceStatus = Sig('in', 'out')
-        getScanData = Sig('in', 'arr[{}]'.format(NUM_RAW_PIXELS))
-        getRawScanData = Sig('in', 'out')
-        setWavelengthData = Sig('in', 'in', 'in', 'in')
-        getWavelengthData = Sig('in', 'in', 'arr[{}]'.format(NUM_RAW_PIXELS), 'out', 'out')
-        getUserCalibrationPoints = Sig('in', 'out', 'out', 'out')
-        setAmplitudeData = Sig('in', 'in', 'in', 'in', 'in')
-        getAmplitudeData = Sig('in', 'arr[{}]'.format(NUM_RAW_PIXELS), 'in', 'in', 'in')
-        identificationQuery = Sig('in', 'buf[256]', 'buf[256]', 'buf[256]', 'buf[256]', 'buf[256]')
-        revision_query = Sig('in', 'out', 'out')
-        reset = Sig('in')
-        self_test = Sig('in', 'out', 'out')
-        setUserText = Sig('in', 'in')
-        getUserText = Sig('in', 'out')
-        setAttribute = Sig('in', 'in', 'in')
-        getAttribute = Sig('in', 'in', 'out')
-        error_query = Sig('in', 'out', 'out')
-        error_message = Sig('in', 'in', 'buf[512]', ret=ret_ignore)
+        close = Sig("in")
+        setIntegrationTime = Sig("in", "in")
+        getIntegrationTime = Sig("in", "out")
+        startScan = Sig("in")
+        startScanCont = Sig("in")
+        startScanExtTrg = Sig("in")
+        startScanContExtTrg = Sig("in")
+        getDeviceStatus = Sig("in", "out")
+        getScanData = Sig("in", "arr[{}]".format(NUM_RAW_PIXELS))
+        getRawScanData = Sig("in", "out")
+        setWavelengthData = Sig("in", "in", "in", "in")
+        getWavelengthData = Sig(
+            "in", "in", "arr[{}]".format(NUM_RAW_PIXELS), "out", "out"
+        )
+        getUserCalibrationPoints = Sig("in", "out", "out", "out")
+        setAmplitudeData = Sig("in", "in", "in", "in", "in")
+        getAmplitudeData = Sig("in", "arr[{}]".format(NUM_RAW_PIXELS), "in", "in", "in")
+        identificationQuery = Sig(
+            "in", "buf[256]", "buf[256]", "buf[256]", "buf[256]", "buf[256]"
+        )
+        revision_query = Sig("in", "out", "out")
+        reset = Sig("in")
+        self_test = Sig("in", "out", "out")
+        setUserText = Sig("in", "in")
+        getUserText = Sig("in", "out")
+        setAttribute = Sig("in", "in", "in")
+        getAttribute = Sig("in", "in", "out")
+        error_query = Sig("in", "out", "out")
+        error_message = Sig("in", "in", "buf[512]", ret=ret_ignore)
 
 
 class SpecTypes(Enum):
@@ -110,36 +115,41 @@ class SpecTypes(Enum):
     CCS175 = NiceCCSLib.CCS175_PID
     CCS200 = NiceCCSLib.CCS200_PID
 
+
 class Calibration(Enum):
     Factory = 0
     User = 1
+
 
 class CorrectionType(Enum):
     Store = 2
     OneTime = 1
 
-class ID_Info():
-    def __init__(self, manufacturer, device_name, serial_number, firmware_version,
-                 driver_version):
+
+class ID_Info:
+    def __init__(
+        self, manufacturer, device_name, serial_number, firmware_version, driver_version
+    ):
         self.manufacturer = manufacturer
         self.device_name = device_name
         self.serial_number = serial_number
         self.firmware_version = firmware_version
         self.driver_version = driver_version
 
-class Status():
+
+class Status:
     def __init__(self, status):
         status = status % 256
-        self.waiting_for_trig = bool(status//WAITING_FOR_TRIG)
+        self.waiting_for_trig = bool(status // WAITING_FOR_TRIG)
 
         status = status % 32
-        self.data_ready = bool(status//DATA_READY)
+        self.data_ready = bool(status // DATA_READY)
 
         status = status % 8
-        self.cont_scan_in_progress = bool(status//CONT_SCAN)
+        self.cont_scan_in_progress = bool(status // CONT_SCAN)
 
         status = status % 4
-        self.idle = bool(status//IDLE)
+        self.idle = bool(status // IDLE)
         return
 
 
@@ -152,7 +162,8 @@ class CCS(Spectrometer):
     :py:func:`~instrumental.drivers.instrument`, using any one of the parameters 'ccs_usb_address',
     'ccs_serial_number', or 'ccs_model' will also return a CCS instance (if successful).
     """
-    _INST_PARAMS_ = ['serial', 'usb', 'model']
+
+    _INST_PARAMS_ = ["serial", "usb", "model"]
 
     def _initialize(self):
         self.Status = Status
@@ -160,13 +171,15 @@ class CCS(Spectrometer):
         self.CorrectionType = CorrectionType
         self.Calibration = Calibration
         self.SpecTypes = SpecTypes
-        self._address = self._paramset['usb']
-        self._serial_number = self._paramset['serial']
-        self._model = self._paramset['model']
+        self._address = self._paramset["usb"]
+        self._serial_number = self._paramset["serial"]
+        self._model = self._paramset["model"]
         self._background = np.zeros((NUM_RAW_PIXELS, 1))
         self._NiceCCSLib = NiceCCSLib
         self._open(self._address)
-        self._wavelength_array = self.calibrate_wavelength(calibration_type=Calibration.Factory)
+        self._wavelength_array = self.calibrate_wavelength(
+            calibration_type=Calibration.Factory
+        )
 
     def __del__(self):
         self.close()
@@ -191,16 +204,16 @@ class CCS(Spectrometer):
         self._NiceCCS.close()
 
     def get_integration_time(self):
-        """ Returns the integration time."""
+        """Returns the integration time."""
         int_time = self._NiceCCS.getIntegrationTime()
-        return Q_(int_time, 's')
+        return Q_(int_time, "s")
 
-    @check_units(integration_time = 's')
+    @check_units(integration_time="s")
     def set_integration_time(self, integration_time, stop_scan=True):
-        """ Sets the integration time."""
+        """Sets the integration time."""
         if stop_scan:
             self.stop_scan()
-        self._NiceCCS.setIntegrationTime(integration_time.to('s').magnitude)
+        self._NiceCCS.setIntegrationTime(integration_time.to("s").magnitude)
         return
 
     def start_single_scan(self):
@@ -237,7 +250,7 @@ class CCS(Spectrometer):
     def stop_scan(self):
         # This is hacky but they do not provide a good function to stop a scan.
         integration_time = self.get_integration_time()
-        self.set_integration_time('2ms', False)
+        self.set_integration_time("2ms", False)
         self.start_single_scan()
         time.sleep(0.001)
         self.set_integration_time(integration_time, False)
@@ -256,7 +269,7 @@ class CCS(Spectrometer):
         return Status(status)
 
     def is_data_ready(self):
-        """Indicates if the spectrometer has data ready to transmit. """
+        """Indicates if the spectrometer has data ready to transmit."""
         status = self.get_status()
         return status.data_ready
 
@@ -298,7 +311,7 @@ class CCS(Spectrometer):
 
     def _cdata_to_numpy(self, cdata, data_type=float, size=None):
         if size is None:
-            size = self._NiceCCSLib.TLCCS_NUM_PIXELS*BYTES_PER_DOUBLE
+            size = self._NiceCCSLib.TLCCS_NUM_PIXELS * BYTES_PER_DOUBLE
         buf = memoryview(ffi.buffer(ffi.addressof(cdata), size)[:])
         return np.frombuffer(buf, data_type)
 
@@ -310,11 +323,11 @@ class CCS(Spectrometer):
         return self._cdata_to_numpy(data)
 
     def reset(self):
-        """ Resets the device."""
+        """Resets the device."""
         self._NiceCCS.reset()
 
     def stop_and_clear(self, max_attempts=MAX_ATTEMPTS):
-        """ Stops any scans in progress, and clears any data waiting to transmit.
+        """Stops any scans in progress, and clears any data waiting to transmit.
         Parameters
         ----------
         max_attempts : int, Default=MAX_ATTEMPTS=10
@@ -336,8 +349,13 @@ class CCS(Spectrometer):
                     self.get_scan_data()
                 success = True
 
-    def take_data(self, integration_time=None, num_avg=1, use_background=False,
-                  max_attempts=MAX_ATTEMPTS):
+    def take_data(
+        self,
+        integration_time=None,
+        num_avg=1,
+        use_background=False,
+        max_attempts=MAX_ATTEMPTS,
+    ):
         """Returns scan data.
 
         The data can be averaged over a number of trials 'num_Avg' if desired.
@@ -369,26 +387,26 @@ class CCS(Spectrometer):
         else:
             integration_time = self.get_integration_time()
         integration_time = Q_(integration_time)
-        wait_time = integration_time/100.
+        wait_time = integration_time / 100.0
 
         self.start_continuous_scan()
 
         for i in range(num_avg):
-            time.sleep(integration_time.to('s').magnitude)
+            time.sleep(integration_time.to("s").magnitude)
             while not self.is_data_ready():
-                time.sleep(wait_time.to('s').magnitude)
+                time.sleep(wait_time.to("s").magnitude)
             temp = self.get_scan_data()
             if i == 0:
                 data = temp
             else:
                 data = data + temp
             if sum(temp >= (1.0 - 1e-5)):
-                raise Warning('Raw data is saturated')
+                raise Warning("Raw data is saturated")
 
         self.stop_and_clear(max_attempts)
-        data = data/num_avg
+        data = data / num_avg
         if use_background:
-            data = data-self._background
+            data = data - self._background
         return [data, self._wavelength_array]
 
     def set_background(self, integration_time=None, num_avg=1):
@@ -408,9 +426,10 @@ class CCS(Spectrometer):
         self._background, _ = self.take_data(integration_time, num_avg)
         return self._background
 
-    @check_enums(calibration_type = Calibration)
-    def calibrate_wavelength(self, calibration_type=Calibration.User,
-                             wavelength_array=None, pixel_array=None):
+    @check_enums(calibration_type=Calibration)
+    def calibrate_wavelength(
+        self, calibration_type=Calibration.User, wavelength_array=None, pixel_array=None
+    ):
         """Sets a custom pixel-wavelength calibration.
 
         The wavelength and pixel points are used to interpolate the correlation between pixel
@@ -442,16 +461,22 @@ class CCS(Spectrometer):
             num_points = len(pixel_array)
             print(num_points)
             if len(wavelength_array) != num_points:
-                raise ValueError("The wavelength and pixel arrays passed to calibrate_wavelength must be of the same length")
+                raise ValueError(
+                    "The wavelength and pixel arrays passed to calibrate_wavelength must be of the same length"
+                )
             if wavelength_array is None or pixel_array is None:
-                raise ValueError("wavelength_array and pixel_array must be passed to calibrate_wavelength if calibration_type is Calibration.User")
+                raise ValueError(
+                    "wavelength_array and pixel_array must be passed to calibrate_wavelength if calibration_type is Calibration.User"
+                )
             self._NiceCCS.setWavelengthData(pixel_array, wavelength_array, num_points)
         wavelength_array, _, _ = self._NiceCCS.getWavelengthData(calibration_type.value)
         self._wavelength_array = self._cdata_to_numpy(wavelength_array)
         return self._wavelength_array
 
     @check_enums(mode=CorrectionType)
-    def set_amplitude_data(self, correction_factors, start_index=0, mode=CorrectionType.Store):
+    def set_amplitude_data(
+        self, correction_factors, start_index=0, mode=CorrectionType.Store
+    ):
         """Sets the amplitude correction factors.
 
         These factors multiply the pixels intensities to correct for variations
@@ -478,9 +503,12 @@ class CCS(Spectrometer):
         """
         num_points = len(correction_factors)
         if (num_points + start_index) > NUM_RAW_PIXELS:
-            raise ValueError('Invalid combination of start_index and num_points in set_amplitude_data')
-        self._NiceCCS.setAmplitudeData(correction_factors, num_points,
-                                       start_index, mode.value)
+            raise ValueError(
+                "Invalid combination of start_index and num_points in set_amplitude_data"
+            )
+        self._NiceCCS.setAmplitudeData(
+            correction_factors, num_points, start_index, mode.value
+        )
 
     def get_amplitude_data(self, mode=CorrectionType.Store):
         """Gets the amplitude correction factors.

@@ -36,7 +36,7 @@ def list_instruments():
     for ind in range(Nrsrc):
         name = rsrc.getRsrcName(ind)
         model_name, serial, manufacturer, isavailable = rsrc.getRsrcInfo(ind)
-        pset.append(ParamSet(TLPM, serial=serial.decode(),  model=model_name.decode()))
+        pset.append(ParamSet(TLPM, serial=serial.decode(), model=model_name.decode()))
     return pset
 
 
@@ -46,15 +46,19 @@ class TLPMError(Exception):
 
 
 class DeviceInfo:
-    def __init__(self, model_name='', serial_number='', manufacturer='', is_available=False):
+    def __init__(
+        self, model_name="", serial_number="", manufacturer="", is_available=False
+    ):
         self.model_name = model_name
         self.serial_number = serial_number
         self.manufacturer = manufacturer
         self.is_available = is_available
 
     def __repr__(self):
-        return f'Model: {self.model_name} / SN: {self.serial_number} by {self.manufacturer} is'\
-               f' {"" if self.is_available else "not"} available'
+        return (
+            f"Model: {self.model_name} / SN: {self.serial_number} by {self.manufacturer} is"
+            f' {"" if self.is_available else "not"} available'
+        )
 
 
 class UNITS(Enum):
@@ -63,29 +67,26 @@ class UNITS(Enum):
 
 
 class TLPM(PowerMeter):
-    _INST_PARAMS_ = ['serial', 'model']
+    _INST_PARAMS_ = ["serial", "model"]
 
-    unit = UNITS['W']
-    init_wavelength = Q_('532nm')
+    unit = UNITS["W"]
+    init_wavelength = Q_("532nm")
 
     def _initialize(self):
-        """
-        """
+        """ """
 
         rsrc = NiceTLPM.Rsrc()
         Nrsrc = rsrc.findRsrc()
         for ind in range(Nrsrc):
             model_name, serial, manufacturer, isavailable = rsrc.getRsrcInfo(ind)
-            if serial == self._paramset['serial'].encode():
+            if serial == self._paramset["serial"].encode():
                 break
         self.name = rsrc.getRsrcName(ind)
         self.index = ind
         self._open(self.name, True)
 
     def _open(self, name, reset=False):
-        """
-
-        """
+        """ """
         self._device = NiceTLPM.Powermeter(name, 1, reset)
         self.wavelength = self.init_wavelength
 
@@ -94,9 +95,10 @@ class TLPM(PowerMeter):
 
     def get_device_info(self) -> DeviceInfo:
         name, serial, manufacturer, isavailable = self._device.getRsrcInfo(self.index)
-        return DeviceInfo(name.decode(), serial.decode(),
-                          manufacturer.decode(), isavailable)
-    
+        return DeviceInfo(
+            name.decode(), serial.decode(), manufacturer.decode(), isavailable
+        )
+
     def get_calibration(self) -> str:
         return self._device.getCalibrationMsg().decode()
 
@@ -107,7 +109,7 @@ class TLPM(PowerMeter):
         return self.unit
 
     @power_unit.setter
-    def power_unit(self, unit='W'):
+    def power_unit(self, unit="W"):
         self._device.setPowerUnit(unit.value)
         self.unit = unit
 
@@ -115,30 +117,29 @@ class TLPM(PowerMeter):
         return Q_(self._device.measPower(), self.unit.name)
 
     def get_wavelength_range(self):
-        lmin = Q_(self._device.getWavelength(NiceTLPM._defs['TLPM_ATTR_MIN_VAL']), 'nm')
-        lmax = Q_(self._device.getWavelength(NiceTLPM._defs['TLPM_ATTR_MAX_VAL']), 'nm')
+        lmin = Q_(self._device.getWavelength(NiceTLPM._defs["TLPM_ATTR_MIN_VAL"]), "nm")
+        lmax = Q_(self._device.getWavelength(NiceTLPM._defs["TLPM_ATTR_MAX_VAL"]), "nm")
         return lmin, lmax
 
-    @Facet(units='nm', type=float)
+    @Facet(units="nm", type=float)
     def wavelength(self):
-        return Q_(self._device.getWavelength(NiceTLPM._defs['TLPM_ATTR_SET_VAL']))
+        return Q_(self._device.getWavelength(NiceTLPM._defs["TLPM_ATTR_SET_VAL"]))
 
     @wavelength.setter
     def wavelength(self, wavelength):
         self._device.setWavelength(wavelength)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from instrumental import list_instruments, instrument
 
-    psets = list_instruments(module='powermeters')
+    psets = list_instruments(module="powermeters")
     with instrument(psets[0]) as powermeter:
         print(powermeter.get_device_info())
         print(powermeter.power_unit.name)
-        powermeter.power_unit = 'W'
+        powermeter.power_unit = "W"
         print(powermeter.get_power())
 
         print(powermeter.get_wavelength_range())
         print(powermeter.wavelength)
-        powermeter.wavelength = Q_('0.532µm')
-
+        powermeter.wavelength = Q_("0.532µm")

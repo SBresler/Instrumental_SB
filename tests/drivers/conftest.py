@@ -15,14 +15,14 @@ inst_map = {}
 def pytest_collection_modifyitems(session, config, items):
     global instruments
     instruments = {}
-    inst_names_str = config.getoption('--instrument')
+    inst_names_str = config.getoption("--instrument")
 
-    inst_names = inst_names_str.split(',') if inst_names_str else ()
+    inst_names = inst_names_str.split(",") if inst_names_str else ()
     for inst_name in inst_names:
         params = conf.instruments[inst_name]
         try:
-            category, driver = params['module'].split('.')
-            instruments[(category, driver, params['classname'])] = params
+            category, driver = params["module"].split(".")
+            instruments[(category, driver, params["classname"])] = params
         except KeyError:
             pass
 
@@ -48,8 +48,8 @@ def pytest_collection_modifyitems(session, config, items):
 
 def inst_key_from_item(item):
     test_fname = item.getparent(pytest.Module).fspath.basename
-    base, _ = test_fname.rsplit('.')
-    _, category, driver = base.split('_')
+    base, _ = test_fname.rsplit(".")
+    _, category, driver = base.split("_")
     test_class = item.getparent(pytest.Class)
 
     if not test_class:

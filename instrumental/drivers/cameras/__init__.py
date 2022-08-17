@@ -12,7 +12,6 @@ from ... import Q_, conf
 from ...errors import Error
 
 
-
 class Camera(Instrument):
     """A generic camera device.
 
@@ -37,9 +36,22 @@ class Camera(Instrument):
         >>> cam.stop_live_video()
     """
 
-    DEFAULT_KWDS = dict(n_frames=1, vbin=1, hbin=1, exposure_time=Q_('10ms'), gain=0, width=None,
-                        height=None, cx=None, cy=None, left=None, right=None, top=None, bot=None,
-                        fix_hotpixels=False)
+    DEFAULT_KWDS = dict(
+        n_frames=1,
+        vbin=1,
+        hbin=1,
+        exposure_time=Q_("10ms"),
+        gain=0,
+        width=None,
+        height=None,
+        cx=None,
+        cy=None,
+        left=None,
+        right=None,
+        top=None,
+        bot=None,
+        fix_hotpixels=False,
+    )
 
     @abc.abstractproperty
     def width(self):
@@ -84,7 +96,7 @@ class Camera(Instrument):
         """
 
     @abc.abstractmethod
-    def get_captured_image(self, timeout='1s', copy=True):
+    def get_captured_image(self, timeout="1s", copy=True):
         """Get the image array(s) from the last capture sequence.
 
         Returns an image numpy array (or tuple of arrays for a multi-exposure sequence). The array
@@ -103,7 +115,7 @@ class Camera(Instrument):
         """
 
     @abc.abstractmethod
-    def grab_image(self, timeouts='1s', copy=True, **kwds):
+    def grab_image(self, timeouts="1s", copy=True, **kwds):
         """Perform a capture and return the resulting image array(s).
 
         This is essentially a convenience function that calls `start_capture()` then
@@ -218,27 +230,27 @@ class Camera(Instrument):
             kwds.setdefault(k, v)
 
         if fill_coords:
-            self.fill_all_coords(kwds, ('width', 'cx', 'left', 'right'))
-            self.fill_all_coords(kwds, ('height', 'cy', 'top', 'bot'))
+            self.fill_all_coords(kwds, ("width", "cx", "left", "right"))
+            self.fill_all_coords(kwds, ("height", "cy", "top", "bot"))
 
     def fill_all_coords(self, kwds, names):
         n_args = sum(kwds[n] is not None for n in names)
         if n_args == 0:
-            kwds[names[0]] = getattr(self, 'max_' + names[0])  # max_width or max_height
+            kwds[names[0]] = getattr(self, "max_" + names[0])  # max_width or max_height
             kwds[names[2]] = 0  # left or top = 0
         elif n_args == 1:
-            max_width = getattr(self, 'max_' + names[0])
+            max_width = getattr(self, "max_" + names[0])
             if kwds[names[2]] is not None:  # Left given
                 kwds[names[3]] = max_width
             elif kwds[names[3]] is not None:  # Right given
                 kwds[names[2]] = 0
             elif kwds[names[1]] is not None:  # Center given
-                if kwds[names[1]] > max_width//2:
+                if kwds[names[1]] > max_width // 2:
                     kwds[names[3]] = max_width  # Bounded by the right
                 else:
                     kwds[names[2]] = 0  # Bounded by the left
             else:  # Width given
-                kwds[names[1]] = max_width//2  # Centered
+                kwds[names[1]] = max_width // 2  # Centered
         elif n_args != 2:
             raise ValueError("Only two of {} should be provided".format(names))
 
@@ -253,14 +265,14 @@ class Camera(Instrument):
         if left is not None:
             if right is not None:
                 width = right - left
-                cx = left + width//2
+                cx = left + width // 2
             elif cx is not None:
                 # Assume an even width
                 right = cx + (cx - left)
                 width = right - left
             elif width is not None:
                 right = left + width
-                cx = left + width//2
+                cx = left + width // 2
         elif right is not None:
             if cx is not None:
                 # Assume an even width
@@ -268,9 +280,9 @@ class Camera(Instrument):
                 left = right - width
             elif width is not None:
                 left = right - width
-                cx = left + width//2
+                cx = left + width // 2
         else:
-            left = cx - width//2
+            left = cx - width // 2
             right = left + width
 
         kwds.update(zip(names, (width, cx, left, right)))
@@ -281,55 +293,65 @@ class Camera(Instrument):
         avg = np.mean(img)
         stddev = np.sqrt(np.var(img))
 
-        threshold = avg + stddevs*stddev
+        threshold = avg + stddevs * stddev
         pixels = np.argwhere(img > threshold)
 
         # Cast to avoid the indices being longs in Py2
-        self._hot_pixels = pixels.astype('int32', copy=False).tolist()
+        self._hot_pixels = pixels.astype("int32", copy=False).tolist()
 
     def save_hot_pixels(self, path=None):
         """Save a file listing the hot pixels."""
         if self._hot_pixels is None:
-            raise Error("No existing list of hot pixels to save. Generate one first by using "
-                        "`find_hot_pixels()`")
+            raise Error(
+                "No existing list of hot pixels to save. Generate one first by using "
+                "`find_hot_pixels()`"
+            )
 
         if not path:
             if self._alias:
-                path = os.path.join(conf.user_conf_dir, 'hotpixel_{}.json'.format(self._alias))
+                path = os.path.join(
+                    conf.user_conf_dir, "hotpixel_{}.json".format(self._alias)
+                )
             else:
-                path = 'hotpixel.json'
+                path = "hotpixel.json"
 
-        with open(path, 'w') as f:
-            json.dump({'hot_pixels': self._hot_pixels}, f)
+        with open(path, "w") as f:
+            json.dump({"hot_pixels": self._hot_pixels}, f)
 
         new_path = os.path.abspath(path)
-        if self._alias and self._param_dict.get('hotpixel_file', None) != new_path:
-            self._param_dict['hotpixel_file'] = new_path
+        if self._alias and self._param_dict.get("hotpixel_file", None) != new_path:
+            self._param_dict["hotpixel_file"] = new_path
             self.save_instrument(self._alias, force=True)
 
     def _correct_hot_pixels(self, img):
         """Correct hot pixels by averaging their neighbors."""
         if self._hot_pixels is None:
-            raise Error("Could not correct hot pixels because we have no existing list of hot "
-                        "pixels. Generate one first by using `find_hot_pixels()`")
+            raise Error(
+                "Could not correct hot pixels because we have no existing list of hot "
+                "pixels. Generate one first by using `find_hot_pixels()`"
+            )
 
         if len(img.shape) != 2:
-            raise NotImplementedError("Hot pixel correction currently implemented only for "
-                                      "monochrome sensors")
+            raise NotImplementedError(
+                "Hot pixel correction currently implemented only for "
+                "monochrome sensors"
+            )
 
         # TODO: Probably shouldn't include adjacent hot pixels
         img = img.copy()
         for y, x in self._hot_pixels:
-            left = max(0, x-1)
-            right = min(img.shape[1], x+2)
-            top = max(0, y-1)
-            bot = min(img.shape[0], y+2)
-            img[y, x] = (img[top:bot, left:right].sum() - img[y, x])/((bot-top)*(right-left)-1)
+            left = max(0, x - 1)
+            right = min(img.shape[1], x + 2)
+            top = max(0, y - 1)
+            bot = min(img.shape[0], y + 2)
+            img[y, x] = (img[top:bot, left:right].sum() - img[y, x]) / (
+                (bot - top) * (right - left) - 1
+            )
         return img
 
 
 def _init_instrument(cam, params):
-    if 'hotpixel_file' in params:
-        with open(params['hotpixel_file']) as f:
+    if "hotpixel_file" in params:
+        with open(params["hotpixel_file"]) as f:
             hotpixel_data = json.load(f)
-            cam._hot_pixels = hotpixel_data['hot_pixels']
+            cam._hot_pixels = hotpixel_data["hot_pixels"]

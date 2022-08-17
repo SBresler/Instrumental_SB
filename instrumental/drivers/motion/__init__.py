@@ -8,5 +8,3 @@ from .. import Instrument
 
 class Motion(Instrument):
     pass
-
-

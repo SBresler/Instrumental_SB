@@ -24,43 +24,53 @@ from ..log import get_logger
 from .. import conf
 from ..util import cached_property
 from ..driver_info import driver_info
-from ..errors import (InstrumentTypeError, InstrumentNotFoundError, ConfigError,
-                      InstrumentExistsError)
+from ..errors import (
+    InstrumentTypeError,
+    InstrumentNotFoundError,
+    ConfigError,
+    InstrumentExistsError,
+)
 
 log = get_logger(__name__)
 
 
-__all__ = ['Instrument', 'instrument', 'list_instruments', 'list_visa_instruments']
+__all__ = ["Instrument", "instrument", "list_instruments", "list_visa_instruments"]
 
 internal_drivers = list(driver_info.keys())  # Hacky list for back-compat usage
 cleanup_funcs = []
 _legacy_params = {
-    'ueye_cam_id': 'uc480_camera_id',
-    'pixelfly_board_num': 'pixelfly_camera_number',
-    'nidaq_devname': 'ni_daq_name',
-    'ccs_usb_address': 'ccs_spectrometer_usb',
-    'ccs_serial_number': 'ccs_spectrometer_serial',
-    'ff_serial': 'flipper_motion_serial',
+    "ueye_cam_id": "uc480_camera_id",
+    "pixelfly_board_num": "pixelfly_camera_number",
+    "nidaq_devname": "ni_daq_name",
+    "ccs_usb_address": "ccs_spectrometer_usb",
+    "ccs_serial_number": "ccs_spectrometer_serial",
+    "ff_serial": "flipper_motion_serial",
 }
 
 
 def driver_submodule_name(full_module_name):
-    return full_module_name.rsplit('instrumental.drivers.', 1)[-1]
+    return full_module_name.rsplit("instrumental.drivers.", 1)[-1]
 
 
 def deprecated(name):
     """Deprecation decorator that warns on a function's first invokation"""
+
     def wrap(func):
         warned = []
+
         def wrapper(*args, **kwds):
             if not warned:
                 warned.append(True)
                 old_name = func.__name__
-                msg = ("'{}' is deprecated and will be removed in future versions of "
-                       "Instrumental. Please use '{}' instead.".format(old_name, name))
+                msg = (
+                    "'{}' is deprecated and will be removed in future versions of "
+                    "Instrumental. Please use '{}' instead.".format(old_name, name)
+                )
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
             return func(*args, **kwds)
+
         return wrapper
+
     return wrap
 
 
@@ -70,22 +80,25 @@ class ParamSet(object):
 
         if cls:
             submodule_name = driver_submodule_name(cls.__module__)
-            self._dict['module'] = submodule_name
-            self._dict['classname'] = cls.__name__
+            self._dict["module"] = submodule_name
+            self._dict["classname"] = cls.__name__
 
     def __repr__(self):
-        param_str = ' '.join('{}={!r}'.format(k, v) for k,v in self._dict.items()
-                             if k not in ('module', 'classname'))
-        if 'classname' in self._dict:
-            return "<ParamSet[{}] {}>".format(self._dict['classname'], param_str)
+        param_str = " ".join(
+            "{}={!r}".format(k, v)
+            for k, v in self._dict.items()
+            if k not in ("module", "classname")
+        )
+        if "classname" in self._dict:
+            return "<ParamSet[{}] {}>".format(self._dict["classname"], param_str)
         else:
             return "<ParamSet {}>".format(param_str)
 
     def create(self, **settings):
         if settings:
-            if 'settings' not in self._dict:
-                self._dict['settings'] = {}
-            self._dict['settings'].update(settings)
+            if "settings" not in self._dict:
+                self._dict["settings"] = {}
+            self._dict["settings"].update(settings)
         return instrument(self)
 
     def matches(self, other):
@@ -126,7 +139,7 @@ class ParamSet(object):
                 self._dict[key] = value
 
     def to_ini(self, name):
-        return '{} = {}'.format(name, self._dict)
+        return "{} = {}".format(name, self._dict)
 
 
 class InstrumentMeta(abc.ABCMeta):
@@ -140,6 +153,7 @@ class InstrumentMeta(abc.ABCMeta):
     parent's docstring rather than overriding it completely. This is useful for the explicitly
     specifying signatures for methods that are wrapped by a decorator.
     """
+
     def __new__(metacls, clsname, bases, classdict):
         props = []
         prop_funcs = {}
@@ -147,90 +161,105 @@ class InstrumentMeta(abc.ABCMeta):
             if isinstance(value, Facet):
                 value.name = name
                 props.append(value)
-                #if hasattr(value, 'fget'):
+                # if hasattr(value, 'fget'):
                 #    classdict['get_' + name] = value.fget
-                #if hasattr(value, 'fset'):
+                # if hasattr(value, 'fset'):
                 #    classdict['set_' + name] = value.fset
 
             # Docstring stuff
-            if not name.startswith('_') and (isfunction(value) or isinstance(value, property)):
+            if not name.startswith("_") and (
+                isfunction(value) or isinstance(value, property)
+            ):
                 cur_doc = value.__doc__
-                if cur_doc is None or (cur_doc.startswith(name) and '\n' not in cur_doc):
-                    prefix = '' if cur_doc is None else cur_doc + '\n\n'
+                if cur_doc is None or (
+                    cur_doc.startswith(name) and "\n" not in cur_doc
+                ):
+                    prefix = "" if cur_doc is None else cur_doc + "\n\n"
                     for base in bases:
                         if hasattr(base, name):
-                            base_doc = getattr(base, name).__doc__ or ''
+                            base_doc = getattr(base, name).__doc__ or ""
                             doc = prefix + base_doc
 
                             if isinstance(value, property):
                                 # Hack b/c __doc__ is readonly for a property...
-                                classdict[name] = property(value.fget, value.fset, value.fdel, doc)
+                                classdict[name] = property(
+                                    value.fget, value.fset, value.fdel, doc
+                                )
                             else:
                                 value.__doc__ = doc
                             break
 
         add_driver_info(clsname, classdict)
 
-        classdict['_instances'] = WeakSet()
-        if '__init__' in classdict:
-            raise TypeError("Subclasses of Instrument may not reimplement __init__. You should "
-                            "implement _initialize instead.")
+        classdict["_instances"] = WeakSet()
+        if "__init__" in classdict:
+            raise TypeError(
+                "Subclasses of Instrument may not reimplement __init__. You should "
+                "implement _initialize instead."
+            )
 
-        classdict['_props'] = props
-        classdict['_prop_funcs'] = prop_funcs
-        return super(InstrumentMeta, metacls).__new__(metacls, clsname, bases, classdict)
+        classdict["_props"] = props
+        classdict["_prop_funcs"] = prop_funcs
+        return super(InstrumentMeta, metacls).__new__(
+            metacls, clsname, bases, classdict
+        )
 
 
 def add_driver_info(classname, classdict):
     """Add an entry in driver_info for class given by classname and classdict"""
-    module_name = classdict['__module__']
-    if module_name.startswith('instrumental.'):
+    module_name = classdict["__module__"]
+    if module_name.startswith("instrumental."):
         return  # Ignore internal drivers, use static driver_info
     entry = driver_info.setdefault(module_name, {})
 
-    cls_params = classdict.get('_INST_PARAMS_', [])
-    params = entry.setdefault('params', [])
+    cls_params = classdict.get("_INST_PARAMS_", [])
+    params = entry.setdefault("params", [])
     for cls_param in cls_params:
         if cls_param not in params:
             params.append(cls_param)  # Should we do this?
 
-    entry.setdefault('classes', []).append(classname)
-    entry.setdefault('imports', [])
+    entry.setdefault("classes", []).append(classname)
+    entry.setdefault("imports", [])
 
-    if 'visa_address' in cls_params:
-        visa_info = entry.setdefault('visa_info', {})
-        visa_info['classname'] = classdict.get('_INST_VISA_INFO_')
+    if "visa_address" in cls_params:
+        visa_info = entry.setdefault("visa_info", {})
+        visa_info["classname"] = classdict.get("_INST_VISA_INFO_")
 
 
 def driver_takes_param(module_name, param_name):
-    return param_name in driver_info.get(module_name, {}).get('params', ())
+    return param_name in driver_info.get(module_name, {}).get("params", ())
 
 
 class Instrument(with_metaclass(InstrumentMeta, object)):
     """
     Base class for all instruments.
     """
+
     _all_instances = {}
 
     @classmethod
     def _create(cls, paramset, **other_attrs):
         """Factory method meant to be used by `instrument()`"""
-        log.debug('Calling _create()')
+        log.debug("Calling _create()")
         cls_paramset = ParamSet(cls, **paramset)
 
-        matching_insts = [open_inst for open_inst in cls._instances
-                          if cls_paramset.matches(open_inst._paramset)]
+        matching_insts = [
+            open_inst
+            for open_inst in cls._instances
+            if cls_paramset.matches(open_inst._paramset)
+        ]
         if matching_insts:
-            if _REOPEN_POLICY == 'strict':
+            if _REOPEN_POLICY == "strict":
                 raise InstrumentExistsError(
                     "Device instance already exists, cannot open in strict mode. Use a reopen "
                     "policy of 'reuse' or 'new' if other behavior is desired. See the Instrumental "
-                    "docs for more information")
-            elif _REOPEN_POLICY == 'reuse':
+                    "docs for more information"
+                )
+            elif _REOPEN_POLICY == "reuse":
                 # TODO: Should we return something other than the first element?
                 log.info('Reopen Policy is "reuse": returning existing instrument')
                 return matching_insts[0]
-            elif _REOPEN_POLICY == 'new':
+            elif _REOPEN_POLICY == "new":
                 log.info('Reopen Policy is "new": creating new instance')
                 pass  # Cross our fingers and try to open a new instance
 
@@ -240,15 +269,15 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
         obj._paramset = cls_paramset
         obj._before_init()
         obj._fill_out_paramset()
-        log.debug('Calling _initialize()')
-        obj._initialize(**paramset.get('settings', {}))
+        log.debug("Calling _initialize()")
+        obj._initialize(**paramset.get("settings", {}))
         obj._after_init()
         return obj
 
     def __new__(cls, inst=None, **kwds):
         # TODO: Is there a more efficient way to implement this behavior?
-        kwds['module'] = driver_submodule_name(cls.__module__)
-        kwds['classname'] = cls.__name__
+        kwds["module"] = driver_submodule_name(cls.__module__)
+        kwds["classname"] = cls.__name__
         return instrument(inst, **kwds)
 
     def _initialize(self, **settings):
@@ -256,10 +285,10 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
 
     def _before_init(self):
         """Called just before _initialize"""
-        log.debug('Calling _before_init()')
+        log.debug("Calling _before_init()")
         self._driver_name = driver_submodule_name(self.__class__.__module__)
         # TODO: consider setting the _module at the class level
-        if not hasattr(self.__class__, '_module'):
+        if not hasattr(self.__class__, "_module"):
             self.__class__._module = import_driver(self._driver_name)
 
         facet_data = [facet.instance(self) for facet in self._props]
@@ -267,39 +296,45 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
 
     def _after_init(self):
         """Called just after _initialize"""
-        log.debug('Calling _after_init()')
+        log.debug("Calling _after_init()")
         cls = self.__class__
 
         # Only add the instrument after init, to ensure it hasn't failed to open
-        Instrument._all_instances.setdefault(self._driver_name, {}).setdefault(cls, WeakSet()).add(self)
+        Instrument._all_instances.setdefault(self._driver_name, {}).setdefault(
+            cls, WeakSet()
+        ).add(self)
         self._instances.add(self)
 
     def _fill_out_paramset(self):
-        log.debug('Calling _fill_out_paramset()')
+        log.debug("Calling _fill_out_paramset()")
         # TODO: Fix the _INST_ system more fundamentally and remove this hack
-        if hasattr(self, '_INST_PARAMS_'):
+        if hasattr(self, "_INST_PARAMS_"):
             mod_params = self._INST_PARAMS_
         else:
             try:
-                mod_params = driver_info[self._driver_name]['params']
+                mod_params = driver_info[self._driver_name]["params"]
             except KeyError:
-                log.info('Instrument class is lacking static info, checking module directly...')
+                log.info(
+                    "Instrument class is lacking static info, checking module directly..."
+                )
                 mod = import_module(self.__module__)
-                if hasattr(mod, '_INST_PARAMS'):
+                if hasattr(mod, "_INST_PARAMS"):
                     mod_params = mod._INST_PARAMS
                 elif isinstance(self, VisaMixin):
                     # Visa mixins *should* just need a visa resource
-                    mod_params = ['visa_address']
+                    mod_params = ["visa_address"]
                 else:
                     raise
         for mod_param_name in mod_params:
             if mod_param_name not in self._paramset.keys():
                 break
         else:
-            log.info("Paramset has all params listed in its driver module, not filling it out")
+            log.info(
+                "Paramset has all params listed in its driver module, not filling it out"
+            )
             return
 
-        if hasattr(self._module, 'list_instruments'):
+        if hasattr(self._module, "list_instruments"):
             log.info("Filling out paramset using `list_instruments()`")
             for paramset in self._module.list_instruments():
                 log.debug("Checking against %r", paramset)
@@ -308,7 +343,9 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
                     log.info("Found match; new params: %r", self._paramset)
                     break
         else:
-            log.info("Driver module missing `list_instruments()`, not filling out paramset")
+            log.info(
+                "Driver module missing `list_instruments()`, not filling out paramset"
+            )
 
     def get(self, facet_name, use_cache=False):
         facet = getattr(self.__class__, facet_name)
@@ -326,7 +363,7 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
         pass
 
     def save_instrument(self, name, force=False):
-        """ Save an entry for this instrument in the config file.
+        """Save an entry for this instrument in the config file.
 
         Parameters
         ----------
@@ -341,6 +378,7 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
         from datetime import datetime
         import os
         import os.path
+
         conf.load_config_file()  # Reload latest version
 
         if name in conf.instruments.keys():
@@ -348,39 +386,46 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
                 raise Exception("An entry already exists for '{}'!".format(name))
             else:
                 import warnings
+
                 warnings.warn("Commenting out existing entry for '{}'".format(name))
 
         try:
             paramset = self._paramset
         except AttributeError:
-            raise NotImplementedError("Class '{}' does not yet support saving".format(type(self)))
+            raise NotImplementedError(
+                "Class '{}' does not yet support saving".format(type(self))
+            )
 
-        date_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        new_entry = '\n# Entry auto-created ' + date_str + '\n' + paramset.to_ini(name) + '\n'
-        old_fname = os.path.join(conf.user_conf_dir, 'instrumental.conf')
-        new_fname = os.path.join(conf.user_conf_dir, 'instrumental_new.conf')
-        bak_fname = os.path.join(conf.user_conf_dir, 'instrumental.conf.bak')
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        new_entry = (
+            "\n# Entry auto-created " + date_str + "\n" + paramset.to_ini(name) + "\n"
+        )
+        old_fname = os.path.join(conf.user_conf_dir, "instrumental.conf")
+        new_fname = os.path.join(conf.user_conf_dir, "instrumental_new.conf")
+        bak_fname = os.path.join(conf.user_conf_dir, "instrumental.conf.bak")
 
-        with open(old_fname, 'r') as old, open(new_fname, 'w') as new:
+        with open(old_fname, "r") as old, open(new_fname, "w") as new:
             in_section = False
             num_trailing = 0
             lines = None
             for line in old:
                 if in_section:
-                    if re.split(':|=', line)[0].strip() == name:
+                    if re.split(":|=", line)[0].strip() == name:
                         # Comment out existing version of this entry
-                        line = '# [{} Auto-commented duplicate] '.format(date_str) + line
+                        line = (
+                            "# [{} Auto-commented duplicate] ".format(date_str) + line
+                        )
 
-                    if line.startswith('['):
+                    if line.startswith("["):
                         # We found the start of the *next* section
                         in_section = False
-                        for l in lines[:len(lines)-num_trailing]:
+                        for l in lines[: len(lines) - num_trailing]:
                             new.write(l)
 
                         new.write(new_entry)
 
                         # Write original trailing space and new section header
-                        for l in lines[len(lines)-num_trailing:]:
+                        for l in lines[len(lines) - num_trailing :]:
                             new.write(l)
                         new.write(line)
                     else:
@@ -392,19 +437,19 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
                 else:
                     new.write(line)
 
-                if line.startswith('[instruments]'):
+                if line.startswith("[instruments]"):
                     in_section = True
                     lines = []
 
             if in_section:
                 # File ended before we saw a new section
-                for l in lines[:len(lines)-num_trailing]:
+                for l in lines[: len(lines) - num_trailing]:
                     new.write(l)
 
                 new.write(new_entry)
 
                 # Write original trailing space
-                for l in lines[len(lines)-num_trailing:]:
+                for l in lines[len(lines) - num_trailing :]:
                     new.write(l)
 
         if os.path.exists(bak_fname):
@@ -417,12 +462,16 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
 
     @cached_property
     def _state_path(self):
-        if not getattr(self, '_alias', None):
-            raise RuntimeError('Instrument must have an alias to provide a default path for saving '
-                               'or loading its state. An alias will be set by using '
-                               'save_instrument() or loading an instrument by alias')
+        if not getattr(self, "_alias", None):
+            raise RuntimeError(
+                "Instrument must have an alias to provide a default path for saving "
+                "or loading its state. An alias will be set by using "
+                "save_instrument() or loading an instrument by alias"
+            )
         inst_module = inspect.getmodule(self.__class__)
-        filename = '{}-{}.{}.pkl'.format(self._alias, inst_module.__name__, self.__class__.__name__)
+        filename = "{}-{}.{}.pkl".format(
+            self._alias, inst_module.__name__, self.__class__.__name__
+        )
         if not os.path.exists(conf.save_dir):
             os.makedirs(conf.save_dir)
         return os.path.join(conf.save_dir, filename)
@@ -430,13 +479,13 @@ class Instrument(with_metaclass(InstrumentMeta, object)):
     def _save_state(self, state_path=None):
         """Save instrument state to a pickle file"""
         state_path = state_path or self._state_path
-        with open(state_path, 'wb') as f:
+        with open(state_path, "wb") as f:
             pickle.dump(self.__dict__, f)
 
     def _load_state(self, state_path=None):
         """Load instrument state from a pickle file"""
         state_path = state_path or self._state_path
-        with open(state_path, 'rb') as f:
+        with open(state_path, "rb") as f:
             state = pickle.load(f)
             self.__dict__.update(state)
             print(state)
@@ -464,8 +513,8 @@ class VisaMixin(Instrument):
         """
         full_message = message.format(*args, **kwds)
         if self._in_transaction:
-            if full_message[0] != ':':
-                full_message = ':' + full_message
+            if full_message[0] != ":":
+                full_message = ":" + full_message
             self._message_queue.append(full_message)
         else:
             self._rsrc.write(full_message)
@@ -519,13 +568,13 @@ class VisaMixin(Instrument):
         """Write all queued messages at once"""
         if not self._in_transaction:
             return
-        message = ';'.join(self._message_queue)
+        message = ";".join(self._message_queue)
         self._rsrc.write(message)
         self._message_queue = []
 
     @property
     def _in_transaction(self):
-        return getattr(self, '_message_queue', None) is not None
+        return getattr(self, "_message_queue", None) is not None
 
     @property
     def resource(self):
@@ -539,6 +588,7 @@ def open_visa_inst(visa_address, raise_errors=False):
     Logs well-known errors, and also suppress them if raise_errors is False.
     """
     import visa
+
     rm = visa.ResourceManager()
     try:
         log.info("Opening VISA resource '{}'".format(visa_address))
@@ -563,7 +613,8 @@ def open_visa_inst(visa_address, raise_errors=False):
 
 def gen_visa_instruments():
     import visa
-    prev_addr = 'START'
+
+    prev_addr = "START"
     rm = visa.ResourceManager()
     visa_list = rm.list_resources()
     for addr in visa_list:
@@ -579,7 +630,7 @@ def gen_visa_instruments():
             driver_module, classname = find_visa_driver_class(visa_inst)
             cls = getattr(driver_module, classname)
         except Exception as e:
-            log.info('Exception occurred when getting correct visa driver module:')
+            log.info("Exception occurred when getting correct visa driver module:")
             log.info(str(e))
             continue
         else:
@@ -592,14 +643,14 @@ def gen_visa_instruments():
 
 
 def try_close_visa_resource(inst_class, resource):
-    if not hasattr(inst_class, '_close_resource'):
+    if not hasattr(inst_class, "_close_resource"):
         return
 
     try:
-        log.debug('Calling %s._close_resource...', inst_class.__name__)
+        log.debug("Calling %s._close_resource...", inst_class.__name__)
         inst_class._close_resource(resource)
     except Exception as e:
-        log.info('Exception occurred when closing visa resource:')
+        log.info("Exception occurred when closing visa resource:")
         log.info(e)
 
 
@@ -654,18 +705,22 @@ def list_instruments(server=None, module=None, blacklist=None):
     """
     if server is not None:
         from . import remote
+
         session = remote.client_session(server)
         return session.list_instruments()
 
     if blacklist is None:
-        blacklist = conf.prefs['driver_blacklist']
+        blacklist = conf.prefs["driver_blacklist"]
     elif isinstance(blacklist, basestring):
         blacklist = [blacklist]
 
     if module:
-        check_visa = any(module in driver_name and driver_name not in blacklist and
-                         'visa_info' in info_dict
-                         for driver_name,info_dict in driver_info.items())
+        check_visa = any(
+            module in driver_name
+            and driver_name not in blacklist
+            and "visa_info" in info_dict
+            for driver_name, info_dict in driver_info.items()
+        )
     else:
         check_visa = True
 
@@ -673,6 +728,7 @@ def list_instruments(server=None, module=None, blacklist=None):
     if check_visa:
         try:
             import visa
+
             try:
                 inst_list.extend(list_visa_instruments())
             except visa.VisaIOError:
@@ -681,7 +737,7 @@ def list_instruments(server=None, module=None, blacklist=None):
             pass  # Ignore if PyVISA not installed or configured
 
     if module:
-        inst_list = [p for p in inst_list if module in p['module']]
+        inst_list = [p for p in inst_list if module in p["module"]]
 
     for mod_name in driver_info:
         if module and module not in mod_name:
@@ -703,7 +759,7 @@ def list_instruments(server=None, module=None, blacklist=None):
 
 
 def list_saved_instruments():
-    return {k: ParamSet(**v) for k,v in conf.instruments.items()}
+    return {k: ParamSet(**v) for k, v in conf.instruments.items()}
 
 
 def _get_visa_instrument(params):
@@ -713,31 +769,39 @@ def _get_visa_instrument(params):
     """
     import visa
 
-    if 'visa_address' not in params:
+    if "visa_address" not in params:
         raise InstrumentTypeError()
-    addr = params['visa_address']
-    visa_attrs = ('baud_rate', 'timeout', 'read_termination', 'write_termination', 'parity')
+    addr = params["visa_address"]
+    visa_attrs = (
+        "baud_rate",
+        "timeout",
+        "read_termination",
+        "write_termination",
+        "parity",
+    )
     kwds = {k: v for k, v in params.items() if k in visa_attrs}
 
     # Check cache to see if we've already found (or not found) the instrument
-    if '**visa_instrument' in params:
-        visa_inst = params['**visa_instrument']
+    if "**visa_instrument" in params:
+        visa_inst = params["**visa_instrument"]
         if visa_inst is None:
-            raise InstrumentNotFoundError("Error: device with address '" +
-                                          addr + "' not found!")
+            raise InstrumentNotFoundError(
+                "Error: device with address '" + addr + "' not found!"
+            )
     else:
         try:
             rm = visa.ResourceManager()
             visa_inst = rm.open_resource(addr, open_timeout=50, **kwds)
             # Cache the instrument for possible later use
-            params['**visa_instrument'] = visa_inst
+            params["**visa_instrument"] = visa_inst
         except visa.VisaIOError:
             # Cache the fact that the instrument isn't connected
-            params['**visa_instrument'] = None
-            raise InstrumentNotFoundError("Error: device with address '" +
-                                          addr + "' not found!")
+            params["**visa_instrument"] = None
+            raise InstrumentNotFoundError(
+                "Error: device with address '" + addr + "' not found!"
+            )
         except Exception:
-            params['**visa_instrument'] = None
+            params["**visa_instrument"] = None
             raise InstrumentNotFoundError("Could not connect to VISA server")
 
     return visa_inst
@@ -766,8 +830,9 @@ def _extract_params(inst, kwargs):
             alias = name
 
         if raw_params is None:
-            raise Exception("Instrument with alias `{}` not ".format(name) +
-                            "found in config file")
+            raise Exception(
+                "Instrument with alias `{}` not ".format(name) + "found in config file"
+            )
 
     params = ParamSet(**raw_params)  # Copy first to avoid modifying input dicts
     params.update(kwargs)
@@ -778,7 +843,7 @@ def _init_instrument(new_inst, params):
     # HACK to allow 'parent' modules to do special initialization of instruments
     # We may get rid of this in the future by having each class's __init__ method directly
     # handle params, getting rid of the _instrument() middleman.
-    parent_mod = import_module('.' + params['module'].rsplit('.', 1)[0], __package__)
+    parent_mod = import_module("." + params["module"].rsplit(".", 1)[0], __package__)
     try:
         parent_mod._init_instrument(new_inst, params)
     except AttributeError:
@@ -791,11 +856,14 @@ def get_idn(inst):
     Returns (None, None) if unsuccessful.
     """
     import visa
+
     try:
         idn = inst.query("*IDN?")
         log.info("*IDN? gives '{}'".format(idn.strip()))
     except UnicodeDecodeError as e:
-        log.info("UnicodeDecodeError while getting IDN. Probably a non-Visa Serial device")
+        log.info(
+            "UnicodeDecodeError while getting IDN. Probably a non-Visa Serial device"
+        )
         log.info(str(e))
         return None, None
     except visa.VisaIOError as e:
@@ -807,7 +875,7 @@ def get_idn(inst):
         return None, None
 
     try:
-        manufac, model, _ = idn.split(',', 2)
+        manufac, model, _ = idn.split(",", 2)
         manufac = manufac.strip()
         model = model.strip()
     except ValueError as e:
@@ -824,7 +892,7 @@ def import_driver(driver_name, raise_errors=False):
         # TODO: store full module names in driver_info (or add leading dot) so that external
         # drivers don't have possible name conflicts
         if driver_name in internal_drivers:
-            return import_module('.' + driver_name, __package__)
+            return import_module("." + driver_name, __package__)
         else:
             return import_module(driver_name)
     except Exception as e:
@@ -844,12 +912,12 @@ def find_matching_drivers(in_params):
     split_params = []
     for in_param, value in in_params.items():
         in_param = _legacy_params.get(in_param, in_param)
-        tup = in_param.split('_', 2)
+        tup = in_param.split("_", 2)
         split_params.append((tup[:-1], tup[-1], value))
 
     for driver_fullname, info in driver_info.items():
-        driver_group, driver_module = driver_fullname.split('.')
-        driver_params = info['params']
+        driver_group, driver_module = driver_fullname.split(".")
+        driver_params = info["params"]
         normalized_params = {}
         log.debug("Checking against %r", (driver_fullname, driver_params))
         for filters, base_param, value in split_params:
@@ -870,7 +938,7 @@ def find_matching_drivers(in_params):
                     break
             elif len(filters) == 1:
                 # Filter must match one
-                filt, = filters
+                (filt,) = filters
                 if filt not in driver_module and filt not in driver_group:
                     break
 
@@ -883,27 +951,30 @@ def find_matching_drivers(in_params):
 
 def find_visa_instrument(params):
     import visa
-    rm = visa.ResourceManager()
-    visa_address = params['visa_address']
 
-    if 'module' in params:
-        driver_module = import_driver(params['module'], raise_errors=True)
-        if hasattr(driver_module, '_instrument'):
+    rm = visa.ResourceManager()
+    visa_address = params["visa_address"]
+
+    if "module" in params:
+        driver_module = import_driver(params["module"], raise_errors=True)
+        if hasattr(driver_module, "_instrument"):
             return driver_module._instrument(params)
 
         log.info("Opening VISA resource '{}'".format(visa_address))
         visa_inst = rm.open_resource(visa_address, open_timeout=50, timeout=200)
 
-        if 'classname' in params:
-            classname = params['classname']
+        if "classname" in params:
+            classname = params["classname"]
         else:
             try:
-                _, classname = find_visa_driver_class(visa_inst, params['module'])
+                _, classname = find_visa_driver_class(visa_inst, params["module"])
             except Exception as e:
                 visa_inst.close()
                 log.exception(e)
-                raise Exception("Couldn't find class in the given module that supports this "
-                                "VISA instrument")
+                raise Exception(
+                    "Couldn't find class in the given module that supports this "
+                    "VISA instrument"
+                )
 
         return create_instrument(driver_module, classname, params, visa_inst)
 
@@ -917,7 +988,7 @@ def find_visa_instrument(params):
             visa_inst.close()
             raise
 
-        if hasattr(driver_module, '_instrument'):
+        if hasattr(driver_module, "_instrument"):
             return driver_module._instrument(params)
         else:
             return create_instrument(driver_module, classname, params, visa_inst)
@@ -933,11 +1004,11 @@ def create_instrument(driver_module, classname, paramset, visa_inst=None):
 
 
 def find_visa_instrument_by_module(in_paramset):
-    driver_name = in_paramset['module']
+    driver_name = in_paramset["module"]
     # This may be slower than strictly necessary, since it tries all visa addresses in order,
     # instead of filtering based on address type. That would require extra machinery though
     for test_paramset in gen_visa_instruments():
-        if test_paramset['module'] == driver_name:
+        if test_paramset["module"] == driver_name:
             in_paramset.lazyupdate(test_paramset)
             return in_paramset.create()
     raise Exception("No instrument from driver {} detected".format(driver_name))
@@ -950,17 +1021,21 @@ def find_visa_driver_class(visa_inst, module=None):
     until a match is found. Raises an exception if no match is found.
     """
     if module:
-        all_info = [(drv_name, mod_info['visa_info'])
-                    for (drv_name, mod_info) in driver_info.items()
-                    if 'visa_info' in mod_info and drv_name == module]
+        all_info = [
+            (drv_name, mod_info["visa_info"])
+            for (drv_name, mod_info) in driver_info.items()
+            if "visa_info" in mod_info and drv_name == module
+        ]
     else:
-        all_info = [(drv_name, mod_info['visa_info'])
-                    for (drv_name, mod_info) in driver_info.items()
-                    if 'visa_info' in mod_info]
+        all_info = [
+            (drv_name, mod_info["visa_info"])
+            for (drv_name, mod_info) in driver_info.items()
+            if "visa_info" in mod_info
+        ]
 
-    module_supports_idn = any(info for _,info in all_info)
+    module_supports_idn = any(info for _, info in all_info)
     if module_supports_idn:
-        log.info('Checking IDN...')
+        log.info("Checking IDN...")
         inst_manufac, inst_model = get_idn(visa_inst)
 
         # Match IDN against driver manufac/model
@@ -970,18 +1045,22 @@ def find_visa_driver_class(visa_inst, module=None):
                 for classname, (cls_manufac, cls_models) in visa_info.items():
                     if inst_manufac == cls_manufac and inst_model in cls_models:
                         log.info("Match found: %s, %s", driver_fullname, classname)
-                        driver_module = import_driver(driver_fullname, raise_errors=True)
+                        driver_module = import_driver(
+                            driver_fullname, raise_errors=True
+                        )
                         return driver_module, classname
 
     # Manually try visa-based drivers
-    log.info('Checking support via `_check_visa_support()`...')
+    log.info("Checking support via `_check_visa_support()`...")
     for driver_fullname, _ in all_info:
         driver_module = import_driver(driver_fullname, raise_errors=False)
         if driver_module is None:
             continue
 
-        if not hasattr(driver_module, '_check_visa_support'):
-            log.info("Module %s missing _check_visa_support(), skipping", driver_fullname)
+        if not hasattr(driver_module, "_check_visa_support"):
+            log.info(
+                "Module %s missing _check_visa_support(), skipping", driver_fullname
+            )
             continue
 
         log.info("Checking if '%s' has a matching class", driver_fullname)
@@ -994,60 +1073,81 @@ def find_visa_driver_class(visa_inst, module=None):
 
 
 def find_nonvisa_instrument(params):
-    if 'module' in params:
-        driver_module = import_driver(params['module'], raise_errors=True)
-        normalized_params = {_legacy_params.get(k, k).rsplit('_', 1)[-1]:v
-                             for k,v in params.items()}
-        if hasattr(driver_module, '_instrument'):
+    if "module" in params:
+        driver_module = import_driver(params["module"], raise_errors=True)
+        normalized_params = {
+            _legacy_params.get(k, k).rsplit("_", 1)[-1]: v for k, v in params.items()
+        }
+        if hasattr(driver_module, "_instrument"):
             return driver_module._instrument(normalized_params)
 
         full_params = find_full_params(normalized_params, driver_module)
         if not full_params:
             # FIXME: Improve this error message
-            raise Exception("{} does not match any known ParamSet from driver module "
-                            "{}.".format(params, params['module']))
+            raise Exception(
+                "{} does not match any known ParamSet from driver module "
+                "{}.".format(params, params["module"])
+            )
 
-        classnames = driver_info[params['module']]['classes']
-        if 'classname' in params:  #force the instrument factory to use the defined class
-            if params['classname'] in classnames:
-                return create_instrument(driver_module, params['classname'], normalized_params)
+        classnames = driver_info[params["module"]]["classes"]
+        if (
+            "classname" in params
+        ):  # force the instrument factory to use the defined class
+            if params["classname"] in classnames:
+                return create_instrument(
+                    driver_module, params["classname"], normalized_params
+                )
         else:  # else try one of the ones defined in driver_info until it works
             for classname in classnames:
                 try:
-                    return create_instrument(driver_module, classname, normalized_params)
+                    return create_instrument(
+                        driver_module, classname, normalized_params
+                    )
                 except (InstrumentTypeError, InstrumentNotFoundError):
                     log.info("Failed to create instrument using '%s'", classname)
 
-        raise Exception("Could not open non-VISA instrument. Driver module '{}' is missing "
-                        "_instrument function, and the listed instrument classes {} "
-                        "Failed to handle these params.".format(params['module'], classnames))
+        raise Exception(
+            "Could not open non-VISA instrument. Driver module '{}' is missing "
+            "_instrument function, and the listed instrument classes {} "
+            "Failed to handle these params.".format(params["module"], classnames)
+        )
     else:
         ok_drivers = find_matching_drivers(params)
         if not ok_drivers:
-            raise Exception("Parameters {} match no existing driver module".format(params))
+            raise Exception(
+                "Parameters {} match no existing driver module".format(params)
+            )
 
-        raise_errors = (len(ok_drivers) == 1)
+        raise_errors = len(ok_drivers) == 1
         for driver_name, normalized_params in ok_drivers:
             driver_module = import_driver(driver_name, raise_errors=raise_errors)
             if driver_module is None:
                 continue
 
-            if hasattr(driver_module, '_instrument'):
-                inst = call_instrument_func(driver_module, normalized_params,
-                                            raise_errors=(len(ok_drivers) == 1))
+            if hasattr(driver_module, "_instrument"):
+                inst = call_instrument_func(
+                    driver_module,
+                    normalized_params,
+                    raise_errors=(len(ok_drivers) == 1),
+                )
                 if not inst:
                     continue
             else:
                 full_params = find_full_params(normalized_params, driver_module)
                 if not full_params:
-                    log.info("%s does not match any known ParamSet from driver module %s",
-                             params, driver_name)
+                    log.info(
+                        "%s does not match any known ParamSet from driver module %s",
+                        params,
+                        driver_name,
+                    )
                     continue
 
-                classnames = driver_info[driver_name]['classes']
+                classnames = driver_info[driver_name]["classes"]
                 for classname in classnames:
                     try:
-                        return create_instrument(driver_module, classname, normalized_params)
+                        return create_instrument(
+                            driver_module, classname, normalized_params
+                        )
                     except Exception as e:
                         log.info("Failed to create instrument using '%s'", classname)
                         log.info(str(e))
@@ -1056,31 +1156,36 @@ def find_nonvisa_instrument(params):
                 log.info("All classes given in this module failed to create instrument")
                 continue
 
-            normalized_params['module'] = driver_name
+            normalized_params["module"] = driver_name
             _init_instrument(inst, normalized_params)
             return inst
 
 
 def call_instrument_func(driver_module, normalized_params, raise_errors):
     try:
-        log.info("Trying to create instrument using module '%s'", driver_module.__name__)
+        log.info(
+            "Trying to create instrument using module '%s'", driver_module.__name__
+        )
         return driver_module._instrument(normalized_params)
     except AttributeError:
-        if raise_errors: raise
+        if raise_errors:
+            raise
         log.info("Module missing _instrument()")
     except InstrumentTypeError:
-        if raise_errors: raise
+        if raise_errors:
+            raise
         log.info("Not the right type")
     except InstrumentNotFoundError:
-        if raise_errors: raise
+        if raise_errors:
+            raise
         log.info("Instrument not found")
 
     return None
 
 
 def find_full_params(normalized_params, driver_module):
-    log.info('Filling out full params')
-    if not hasattr(driver_module, 'list_instruments'):
+    log.info("Filling out full params")
+    if not hasattr(driver_module, "list_instruments"):
         log.info("Driver module missing `list_instruments()`, not filling out paramset")
         return normalized_params
 
@@ -1093,10 +1198,12 @@ def find_full_params(normalized_params, driver_module):
 # we have to get this info to the Instrument class when it's instantiating a new instrument, the
 # paths to that code are many, varied, and winding.
 _REOPEN_POLICY = None
+
+
 @contextlib.contextmanager
 def _reopen_context(reopen_policy):
     global _REOPEN_POLICY
-    if reopen_policy not in ('strict', 'reuse', 'new'):
+    if reopen_policy not in ("strict", "reuse", "new"):
         raise ValueError("Reopen policy must be one of 'strict', 'reuse', 'new'")
     _REOPEN_POLICY = reopen_policy
     yield
@@ -1123,21 +1230,24 @@ def instrument(inst=None, **kwargs):
     >>> inst3 = instrument({'visa_address': 'TCPIP:192.168.1.35::INSTR'})
     >>> inst4 = instrument(inst1)
     """
-    log.info('Called instrument() with inst=%s, kwargs=%s', inst, kwargs)
+    log.info("Called instrument() with inst=%s, kwargs=%s", inst, kwargs)
     if isinstance(inst, Instrument):
         return inst
 
-    with _reopen_context(kwargs.pop('reopen_policy', 'strict')):
+    with _reopen_context(kwargs.pop("reopen_policy", "strict")):
         params, alias = _extract_params(inst, kwargs)
 
-        if 'server' in params:
+        if "server" in params:
             from . import remote
-            host = params['server']
+
+            host = params["server"]
             session = remote.client_session(host)
             inst = session.instrument(params)
-        elif 'visa_address' in params:
+        elif "visa_address" in params:
             inst = find_visa_instrument(params)
-        elif 'module' in params and driver_takes_param(params['module'], 'visa_address'):
+        elif "module" in params and driver_takes_param(
+            params["module"], "visa_address"
+        ):
             inst = find_visa_instrument_by_module(params)
         else:
             inst = find_nonvisa_instrument(params)
@@ -1161,21 +1271,21 @@ def register_cleanup(func):
 
 @atexit.register
 def _close_atexit():
-    log.info('Program is exiting, closing all instruments...')
+    log.info("Program is exiting, closing all instruments...")
     for class_instances in Instrument._all_instances.values():
         for instances in class_instances.values():
             for inst in instances:
-                log.info('Closing %s', inst)
+                log.info("Closing %s", inst)
                 try:
                     inst.close()
                 except Exception:
                     pass  # Instrument may have already been closed
-    log.info('Done closing instruments')
+    log.info("Done closing instruments")
 
-    log.info('Doing driver module-level cleanup...')
+    log.info("Doing driver module-level cleanup...")
     for cleanup_func in cleanup_funcs:
         try:
-            if hasattr(cleanup_func, '__name__'):
+            if hasattr(cleanup_func, "__name__"):
                 log.info("Calling '%s'", cleanup_func.__name__)
             else:
                 log.info("Calling cleanup function")

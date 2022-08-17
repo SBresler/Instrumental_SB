@@ -10,18 +10,53 @@ from . import FunctionGenerator
 from .. import VisaMixin, MessageFacet
 from ... import u, Q_
 
-_INST_PARAMS = ['visa_address']
+_INST_PARAMS = ["visa_address"]
 _INST_VISA_INFO = {
-    'AFG_3000': ('TEKTRONIX',
-                 ['AFG3011', 'AFG3021B', 'AFG3022B', 'AFG3101', 'AFG3102', 'AFG3251', 'AFG3252'])
+    "AFG_3000": (
+        "TEKTRONIX",
+        ["AFG3011", "AFG3021B", "AFG3022B", "AFG3101", "AFG3102", "AFG3251", "AFG3252"],
+    )
 }
 
-_shapes = ['sinusoid', 'square', 'pulse', 'ramp', 'prnoise', 'dc', 'sinc', 'gaussian', 'lorentz',
-           'erise', 'edecay', 'haversine', 'user1', 'user2', 'user3', 'user4', 'ememory', 'efile']
-_abbrev_shapes = ['sin', 'squ', 'puls', 'ramp', 'prn', 'dc', 'sinc', 'gaus',
-                  'lor', 'eris', 'edec', 'hav', 'user', 'emem', 'efil']
-_amp_keys = ['vpp', 'vrms', 'dbm']
-_volt_keys = ['vpp', 'vrms', 'dbm', 'offset', 'high', 'low']
+_shapes = [
+    "sinusoid",
+    "square",
+    "pulse",
+    "ramp",
+    "prnoise",
+    "dc",
+    "sinc",
+    "gaussian",
+    "lorentz",
+    "erise",
+    "edecay",
+    "haversine",
+    "user1",
+    "user2",
+    "user3",
+    "user4",
+    "ememory",
+    "efile",
+]
+_abbrev_shapes = [
+    "sin",
+    "squ",
+    "puls",
+    "ramp",
+    "prn",
+    "dc",
+    "sinc",
+    "gaus",
+    "lor",
+    "eris",
+    "edec",
+    "hav",
+    "user",
+    "emem",
+    "efil",
+]
+_amp_keys = ["vpp", "vrms", "dbm"]
+_volt_keys = ["vpp", "vrms", "dbm", "offset", "high", "low"]
 
 
 def _is_valid_shape(test_shape):
@@ -39,40 +74,42 @@ def _verify_voltage_args(kwargs):
     are set. Additionally, only 1 of vpp, vrm, and dbm can be set. Raises
     an exception if this condition is not met
     """
-    if sum( (int(k in kwargs) for k in _amp_keys) ) > 1:
-        raise Exception('May include at most one of `vpp`, `vrms`, and `dbm`')
+    if sum((int(k in kwargs) for k in _amp_keys)) > 1:
+        raise Exception("May include at most one of `vpp`, `vrms`, and `dbm`")
 
-    if sum( (int(k in kwargs) for k in _volt_keys) ) > 2:
-        raise Exception('May include at most two of `vpp`, `vrms`, `dbm`, ' +
-                        '`offset`, `high`, and `low`.')
+    if sum((int(k in kwargs) for k in _volt_keys)) > 2:
+        raise Exception(
+            "May include at most two of `vpp`, `vrms`, `dbm`, "
+            + "`offset`, `high`, and `low`."
+        )
 
 
 def _verify_sweep_args(kwargs):
-    start_stop = ('start' in kwargs) or ('stop' in kwargs)
-    center_span = ('center' in kwargs) or ('span' in kwargs)
+    start_stop = ("start" in kwargs) or ("stop" in kwargs)
+    center_span = ("center" in kwargs) or ("span" in kwargs)
     if start_stop and center_span:
-        raise Exception('May include only start/stop or center/span')
+        raise Exception("May include only start/stop or center/span")
 
 
 def infer_termination(msg_str):
-    if msg_str.endswith('\r\n'):
-        return '\r\n'
-    elif msg_str.endswith('\r'):
-        return '\r'
-    elif msg_str.endswith('\n'):
-        return '\n'
+    if msg_str.endswith("\r\n"):
+        return "\r\n"
+    elif msg_str.endswith("\r"):
+        return "\r"
+    elif msg_str.endswith("\n"):
+        return "\n"
     return None
 
 
 def VoltageFacet(msg, readonly=False, **kwds):
-    get_msg = msg + '?'
-    set_msg = None if readonly else msg + ' {}V'
-    return MessageFacet(get_msg, set_msg, convert=float, units='V', **kwds)
+    get_msg = msg + "?"
+    set_msg = None if readonly else msg + " {}V"
+    return MessageFacet(get_msg, set_msg, convert=float, units="V", **kwds)
 
 
 class AFG_3000(FunctionGenerator, VisaMixin):
     def _initialize(self):
-        response = self.query('*IDN?')
+        response = self.query("*IDN?")
         self._rsrc.read_termination = infer_termination(response)
 
     def set_function(self, **kwargs):
@@ -105,24 +142,24 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         """
         _verify_voltage_args(kwargs)
 
-        channel = kwargs.get('channel', 1)
+        channel = kwargs.get("channel", 1)
 
-        if 'vpp' in kwargs:
-            self.set_vpp(kwargs['vpp'], channel)
-        if 'vrms' in kwargs:
-            self.set_vrms(kwargs['vrms'], channel)
-        if 'dbm' in kwargs:
-            self.set_dbm(kwargs['dbm'], channel)
-        if 'offset' in kwargs:
-            self.set_offset(kwargs['offset'], channel)
-        if 'high' in kwargs:
-            self.set_high(kwargs['high'], channel)
-        if 'low' in kwargs:
-            self.set_low(kwargs['low'], channel)
-        if 'shape' in kwargs:
-            self.set_function_shape(kwargs['shape'], channel)
-        if 'phase' in kwargs:
-            self.set_phase(kwargs['phase'], channel)
+        if "vpp" in kwargs:
+            self.set_vpp(kwargs["vpp"], channel)
+        if "vrms" in kwargs:
+            self.set_vrms(kwargs["vrms"], channel)
+        if "dbm" in kwargs:
+            self.set_dbm(kwargs["dbm"], channel)
+        if "offset" in kwargs:
+            self.set_offset(kwargs["offset"], channel)
+        if "high" in kwargs:
+            self.set_high(kwargs["high"], channel)
+        if "low" in kwargs:
+            self.set_low(kwargs["low"], channel)
+        if "shape" in kwargs:
+            self.set_function_shape(kwargs["shape"], channel)
+        if "phase" in kwargs:
+            self.set_phase(kwargs["phase"], channel)
 
     def set_function_shape(self, shape, channel=1):
         """ Set shape of output function.
@@ -141,30 +178,30 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         """
         if not _is_valid_shape(shape):
             raise Exception("Error: invalid shape '{}'".format(shape))
-        self.write('source{}:function:shape {}', channel, shape)
+        self.write("source{}:function:shape {}", channel, shape)
 
     def get_vpp(self, channel=1):
-        """ Get the peak-to-peak voltage of the current waveform.
+        """Get the peak-to-peak voltage of the current waveform.
 
         Returns
         -------
         vpp : pint.Quantity
             The current waveform's peak-to-peak voltage
         """
-        return self._get_amplitude('vpp', channel)
+        return self._get_amplitude("vpp", channel)
 
     def get_vrms(self, channel=1):
-        """ Get the RMS voltage of the current waveform.
+        """Get the RMS voltage of the current waveform.
 
         Returns
         -------
         vrms : pint.Quantity
             The current waveform's RMS voltage
         """
-        return self._get_amplitude('vrms', channel)
+        return self._get_amplitude("vrms", channel)
 
     def get_dbm(self, channel=1):
-        """ Get the amplitude of the current waveform in dBm.
+        """Get the amplitude of the current waveform in dBm.
 
         Note that this returns a float, not a pint.Quantity
 
@@ -173,42 +210,42 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         dbm : float
             The current waveform's dBm amplitude
         """
-        return self._get_amplitude('dbm', channel)
+        return self._get_amplitude("dbm", channel)
 
     def _get_amplitude(self, units, channel):
-        old_units = self.query('source{}:voltage:unit?', channel)
+        old_units = self.query("source{}:voltage:unit?", channel)
 
         if old_units.lower() != units.lower():
-            self.write('source{}:voltage:unit {}', channel, units)
-            resp = self.query('source{}:voltage:amplitude?', channel)
-            self.write('source{}:voltage:unit {}', channel, old_units)
+            self.write("source{}:voltage:unit {}", channel, units)
+            resp = self.query("source{}:voltage:amplitude?", channel)
+            self.write("source{}:voltage:unit {}", channel, old_units)
         else:
             # Don't need to switch units
-            resp = self.query('source{}:voltage:amplitude?', channel)
+            resp = self.query("source{}:voltage:amplitude?", channel)
         return float(resp) * u.V
 
     def set_vpp(self, vpp, channel=1):
-        """ Set the peak-to-peak voltage of the current waveform.
+        """Set the peak-to-peak voltage of the current waveform.
 
         Parameters
         ----------
         vpp : pint.Quantity
             The new peak-to-peak voltage
         """
-        self._set_amplitude(vpp, 'vpp', channel)
+        self._set_amplitude(vpp, "vpp", channel)
 
     def set_vrms(self, vrms, channel=1):
-        """ Set the amplitude of the current waveform in dBm.
+        """Set the amplitude of the current waveform in dBm.
 
         Parameters
         ----------
         vrms : pint.Quantity
             The new RMS voltage
         """
-        self._set_amplitude(vrms, 'vrms', channel)
+        self._set_amplitude(vrms, "vrms", channel)
 
     def set_dbm(self, dbm, channel=1):
-        """ Set the amplitude of the current waveform in dBm.
+        """Set the amplitude of the current waveform in dBm.
 
         Note that this returns a float, not a pint.Quantity
 
@@ -217,15 +254,15 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         dbm : float
             The current waveform's dBm amplitude
         """
-        self._set_amplitude(dbm, 'dbm', channel)
+        self._set_amplitude(dbm, "dbm", channel)
 
     def _set_amplitude(self, val, units, channel):
         val = Q_(val)
-        mag = val.to('V').magnitude
-        self.write('source{}:voltage {}{}', channel, mag, units)
+        mag = val.to("V").magnitude
+        self.write("source{}:voltage {}{}", channel, mag, units)
 
     def set_offset(self, offset, channel=1):
-        """ Set the voltage offset of the current waveform.
+        """Set the voltage offset of the current waveform.
 
         This changes the offset while keeping the amplitude fixed.
 
@@ -235,11 +272,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             The new voltage offset in volt-compatible units
         """
         offset = Q_(offset)
-        mag = offset.to('V').magnitude
-        self.write('source{}:voltage:offset {}V', channel, mag)
+        mag = offset.to("V").magnitude
+        self.write("source{}:voltage:offset {}V", channel, mag)
 
     def set_high(self, high, channel=1):
-        """ Set the high voltage level of the current waveform.
+        """Set the high voltage level of the current waveform.
 
         This changes the high level while keeping the low level fixed.
 
@@ -249,11 +286,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             The new high level in volt-compatible units
         """
         high = Q_(high)
-        mag = high.to('V').magnitude
-        self.write('source{}:voltage:high {}V', channel, mag)
+        mag = high.to("V").magnitude
+        self.write("source{}:voltage:high {}V", channel, mag)
 
     def set_low(self, low, channel=1):
-        """ Set the low voltage level of the current waveform.
+        """Set the low voltage level of the current waveform.
 
         This changes the low level while keeping the high level fixed.
 
@@ -263,11 +300,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             The new low level in volt-compatible units
         """
         low = Q_(low)
-        mag = low.to('V').magnitude
-        self.write('source{}:voltage:low {}V', channel, mag)
+        mag = low.to("V").magnitude
+        self.write("source{}:voltage:low {}V", channel, mag)
 
     def set_phase(self, phase, channel=1):
-        """ Set the phase offset of the current waveform.
+        """Set the phase offset of the current waveform.
 
         Parameters
         ----------
@@ -278,173 +315,173 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         phase = Q_(phase)  # This also accepts dimensionless numbers as rads
         if phase < -u.pi or phase > +u.pi:
             raise Exception("Phase out of range. Must be between -pi and +pi")
-        mag = phase.to('rad').magnitude
-        self.write('source{}:phase {}rad', channel, mag)
+        mag = phase.to("rad").magnitude
+        self.write("source{}:phase {}rad", channel, mag)
 
     # Facets for the *current* channel
-    offset = VoltageFacet('source:voltage:offset')
-    amplitude = VoltageFacet('source:voltage:amplitude')
-    high = VoltageFacet('source:voltage:high')
-    low = VoltageFacet('source:voltage:low')
+    offset = VoltageFacet("source:voltage:offset")
+    amplitude = VoltageFacet("source:voltage:amplitude")
+    high = VoltageFacet("source:voltage:high")
+    low = VoltageFacet("source:voltage:low")
 
     def enable_AM(self, enable=True, channel=1):
-        """ Enable amplitude modulation mode.
+        """Enable amplitude modulation mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable AM
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:am:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:am:state {}", channel, val)
 
     def disable_AM(self, channel=1):
-        """ Disable amplitude modulation mode. """
-        self.write('source{}:am:state off', channel)
+        """Disable amplitude modulation mode."""
+        self.write("source{}:am:state off", channel)
 
     def AM_enabled(self, channel=1):
-        """ Returns whether amplitude modulation is enabled.
+        """Returns whether amplitude modulation is enabled.
 
         Returns
         -------
         bool
             Whether AM is enabled.
         """
-        resp = self.query('source{}:am:state?', channel)
+        resp = self.query("source{}:am:state?", channel)
         return bool(int(resp))
 
     def enable_FM(self, enable=True, channel=1):
-        """ Enable frequency modulation mode.
+        """Enable frequency modulation mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable FM
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:fm:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:fm:state {}", channel, val)
 
     def disable_FM(self, channel=1):
-        """ Disable frequency modulation mode. """
-        self.write('source{}:fm:state off', channel)
+        """Disable frequency modulation mode."""
+        self.write("source{}:fm:state off", channel)
 
     def FM_enabled(self, channel=1):
-        """ Returns whether frequency modulation is enabled.
+        """Returns whether frequency modulation is enabled.
 
         Returns
         -------
         bool
             Whether FM is enabled.
         """
-        resp = self.query('source{}:fm:state?', channel)
+        resp = self.query("source{}:fm:state?", channel)
         return bool(int(resp))
 
     def enable_FSK(self, enable=True, channel=1):
-        """ Enable frequency-shift keying mode.
+        """Enable frequency-shift keying mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable FSK
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:fskey:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:fskey:state {}", channel, val)
 
     def disable_FSK(self, channel=1):
-        """ Disable frequency-shift keying mode. """
-        self.write('source{}:fskey:state off', channel)
+        """Disable frequency-shift keying mode."""
+        self.write("source{}:fskey:state off", channel)
 
     def FSK_enabled(self, channel=1):
-        """ Returns whether frequency-shift keying modulation is enabled.
+        """Returns whether frequency-shift keying modulation is enabled.
 
         Returns
         -------
         bool
             Whether FSK is enabled.
         """
-        resp = self.query('source{}:fskey:state?', channel)
+        resp = self.query("source{}:fskey:state?", channel)
         return bool(int(resp))
 
     def enable_PWM(self, enable=True, channel=1):
-        """ Enable pulse width modulation mode.
+        """Enable pulse width modulation mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable PWM
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:pwm:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:pwm:state {}", channel, val)
 
     def disable_PWM(self, channel=1):
-        """ Disable pulse width modulation mode. """
-        self.write('source{}:pwm:state off', channel)
+        """Disable pulse width modulation mode."""
+        self.write("source{}:pwm:state off", channel)
 
     def PWM_enabled(self, channel=1):
-        """ Returns whether pulse width modulation is enabled.
+        """Returns whether pulse width modulation is enabled.
 
         Returns
         -------
         bool
             Whether PWM is enabled.
         """
-        resp = self.query('source{}:pwm:state?', channel)
+        resp = self.query("source{}:pwm:state?", channel)
         return bool(int(resp))
 
     def enable_PM(self, enable=True, channel=1):
-        """ Enable phase modulation mode.
+        """Enable phase modulation mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable PM
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:pm:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:pm:state {}", channel, val)
 
     def disable_PM(self, channel=1):
-        """ Disable phase modulation mode. """
-        self.write('source{}:pm:state off', channel)
+        """Disable phase modulation mode."""
+        self.write("source{}:pm:state off", channel)
 
     def PM_enabled(self, channel=1):
-        """ Returns whether phase modulation is enabled.
+        """Returns whether phase modulation is enabled.
 
         Returns
         -------
         bool
             Whether PM is enabled.
         """
-        resp = self.query('source{}:pm:state?', channel)
+        resp = self.query("source{}:pm:state?", channel)
         return bool(int(resp))
 
     def enable_burst(self, enable=True, channel=1):
-        """ Enable burst mode.
+        """Enable burst mode.
 
         Parameters
         ----------
         enable : bool, optional
             Whether to enable or disable burst mode.
         """
-        val = 'on' if enable else 'off'
-        self.write('source{}:burst:state {}', channel, val)
+        val = "on" if enable else "off"
+        self.write("source{}:burst:state {}", channel, val)
 
     def disable_burst(self, channel=1):
-        """ Disable burst mode. """
-        self.write('source{}:burst:state off', channel)
+        """Disable burst mode."""
+        self.write("source{}:burst:state off", channel)
 
     def burst_enabled(self, channel=1):
-        """ Returns whether burst mode is enabled.
+        """Returns whether burst mode is enabled.
 
         Returns
         -------
         bool
             Whether burst mode is enabled.
         """
-        resp = self.query('source{}:burst:state?', channel)
+        resp = self.query("source{}:burst:state?", channel)
         return bool(int(resp))
 
     def set_frequency(self, freq, change_mode=True, channel=1):
-        """ Set the frequency to be used in fixed frequency mode.
+        """Set the frequency to be used in fixed frequency mode.
 
         Parameters
         ----------
@@ -454,17 +491,17 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             If True, will set the frequency mode to `fixed`.
         """
         if change_mode:
-            self.write('source{}:freq:mode fixed', channel)
-        val = Q_(freq).to('Hz').magnitude
-        self.write('source{}:freq {}Hz', channel, val)
+            self.write("source{}:freq:mode fixed", channel)
+        val = Q_(freq).to("Hz").magnitude
+        self.write("source{}:freq {}Hz", channel, val)
 
     def get_frequency(self, channel=1):
-        """ Get the frequency to be used in fixed frequency mode. """
-        resp = self.query('source{}:freq?', channel)
-        return Q_(resp, 'Hz')
+        """Get the frequency to be used in fixed frequency mode."""
+        resp = self.query("source{}:freq?", channel)
+        return Q_(resp, "Hz")
 
     def set_frequency_mode(self, mode, channel=1):
-        """ Set the frequency mode.
+        """Set the frequency mode.
 
         In fixed mode, the waveform's frequency is kept constant. In sweep mode,
         it is swept according to the sweep settings.
@@ -474,23 +511,23 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         mode : {'fixed', 'sweep'}
             Mode to switch to.
         """
-        if mode.lower() not in ['fixed', 'sweep']:
+        if mode.lower() not in ["fixed", "sweep"]:
             raise Exception("Mode must be 'fixed' or 'sweep'")
-        self.write('source{}:freq:mode {}', channel, mode)
+        self.write("source{}:freq:mode {}", channel, mode)
 
     def get_frequency_mode(self, channel=1):
-        """ Get the frequency mode.
+        """Get the frequency mode.
 
         Returns
         -------
         'fixed' or 'sweep'
             The frequency mode
         """
-        resp = self.query('source{}:freq:mode?', channel)
-        return 'sweep' if 'sweep'.startswith(resp.lower()) else 'fixed'
+        resp = self.query("source{}:freq:mode?", channel)
+        return "sweep" if "sweep".startswith(resp.lower()) else "fixed"
 
     def sweep_enabled(self, channel=1):
-        """ Whether the frequency mode is sweep.
+        """Whether the frequency mode is sweep.
 
         Just a convenience method to avoid writing
         ``get_frequency_mode() == 'sweep'``.
@@ -500,10 +537,10 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         bool
             Whether the frequency mode is sweep
         """
-        return self.get_frequency_mode(channel) == 'sweep'
+        return self.get_frequency_mode(channel) == "sweep"
 
     def set_sweep_start(self, start, channel=1):
-        """ Set the sweep start frequency.
+        """Set the sweep start frequency.
 
         This sets the start frequency while keeping the stop frequency
         fixed. The span and center frequencies will be changed.
@@ -513,11 +550,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         start : pint.Quantity
             The start frequency of the sweep in Hz-compatible units
         """
-        val = Q_(start).to('Hz').magnitude
-        self.write('source{}:freq:start {}Hz', channel, val)
+        val = Q_(start).to("Hz").magnitude
+        self.write("source{}:freq:start {}Hz", channel, val)
 
     def set_sweep_stop(self, stop, channel=1):
-        """ Set the sweep stop frequency.
+        """Set the sweep stop frequency.
 
         This sets the stop frequency while keeping the start frequency
         fixed. The span and center frequencies will be changed.
@@ -527,11 +564,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         stop : pint.Quantity
             The stop frequency of the sweep in Hz-compatible units
         """
-        val = Q_(stop).to('Hz').magnitude
-        self.write('source{}:freq:stop {}Hz', channel, val)
+        val = Q_(stop).to("Hz").magnitude
+        self.write("source{}:freq:stop {}Hz", channel, val)
 
     def set_sweep_span(self, span, channel=1):
-        """ Set the sweep frequency span.
+        """Set the sweep frequency span.
 
         This sets the sweep frequency span while keeping the center frequency
         fixed. The start and stop frequencies will be changed.
@@ -541,11 +578,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         span : pint.Quantity
             The frequency span of the sweep in Hz-compatible units
         """
-        val = Q_(span).to('Hz').magnitude
-        self.write('source{}:freq:span {}Hz', channel, val)
+        val = Q_(span).to("Hz").magnitude
+        self.write("source{}:freq:span {}Hz", channel, val)
 
     def set_sweep_center(self, center, channel=1):
-        """ Set the sweep frequency center.
+        """Set the sweep frequency center.
 
         This sets the sweep center frequency while keeping the sweep frequency
         span fixed. The start and stop frequencies will be changed.
@@ -555,11 +592,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         center : pint.Quantity
             The center frequency of the sweep in Hz-compatible units
         """
-        val = Q_(center).to('Hz').magnitude
-        self.write('source{}:freq:center {}Hz', channel, val)
+        val = Q_(center).to("Hz").magnitude
+        self.write("source{}:freq:center {}Hz", channel, val)
 
     def set_sweep_time(self, time, channel=1):
-        """ Set the sweep time.
+        """Set the sweep time.
 
         The sweep time does not include hold time or return time. Sweep time
         must be between 1 ms and 300 s.
@@ -570,13 +607,13 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             The sweep time in second-compatible units. Must be between 1 ms and
             200 s
         """
-        val = Q_(time).to('s').magnitude
+        val = Q_(time).to("s").magnitude
         if not (1e-3 <= val <= 200):
             raise Exception("Sweep time must be between 1 ms and 200 s")
-        self.write('source{}:sweep:time {}s', channel, val)
+        self.write("source{}:sweep:time {}s", channel, val)
 
     def set_sweep_hold_time(self, time, channel=1):
-        """ Set the hold time of the sweep.
+        """Set the hold time of the sweep.
 
         The hold time is the amount of time that the frequency is held constant
         after reaching the stop frequency.
@@ -586,11 +623,11 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         time : pint.Quantity
             The hold time in second-compatible units
         """
-        val = Q_(time).to('s').magnitude
-        self.write('source{}:sweep:htime {}s', channel, val)
+        val = Q_(time).to("s").magnitude
+        self.write("source{}:sweep:htime {}s", channel, val)
 
     def set_sweep_return_time(self, time, channel=1):
-        """ Set the return time of the sweep.
+        """Set the return time of the sweep.
 
         The return time is the amount of time that the frequency spends
         sweeping from the stop frequency back to the start frequency. This
@@ -601,23 +638,23 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         time : pint.Quantity
             The return time in second-compatible units
         """
-        val = Q_(time).to('s').magnitude
-        self.write('source{}:sweep:rtime {}s', channel, val)
+        val = Q_(time).to("s").magnitude
+        self.write("source{}:sweep:rtime {}s", channel, val)
 
     def set_sweep_spacing(self, spacing, channel=1):
-        """ Set whether a sweep is linear or logarithmic.
+        """Set whether a sweep is linear or logarithmic.
 
         Parameters
         ----------
         spacing : {'linear', 'lin', 'logarithmic', 'log'}
             The spacing in time of the sweep frequencies
         """
-        if spacing.lower() not in ['lin', 'linear', 'log', 'logarithmic']:
+        if spacing.lower() not in ["lin", "linear", "log", "logarithmic"]:
             raise Exception("Spacing must be 'LINear' or 'LOGarithmic'")
-        self.write('source{}:sweep:spacing {}', channel, spacing)
+        self.write("source{}:sweep:spacing {}", channel, spacing)
 
     def set_sweep(self, channel=1, **kwargs):
-        """ Set selected sweep parameters.
+        """Set selected sweep parameters.
 
         Automatically enables sweep mode.
 
@@ -642,27 +679,27 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             The spacing in time of the sweep frequencies
         """
         _verify_sweep_args(kwargs)
-        self.set_frequency_mode('sweep')
+        self.set_frequency_mode("sweep")
 
-        if 'start' in kwargs:
-            self.set_sweep_start(kwargs['start'], channel)
-        if 'stop' in kwargs:
-            self.set_sweep_stop(kwargs['stop'], channel)
-        if 'span' in kwargs:
-            self.set_sweep_span(kwargs['span'], channel)
-        if 'center' in kwargs:
-            self.set_sweep_center(kwargs['center'], channel)
-        if 'sweep_time' in kwargs:
-            self.set_sweep_time(kwargs['sweep_time'], channel)
-        if 'hold_time' in kwargs:
-            self.set_sweep_hold_time(kwargs['hold_time'], channel)
-        if 'return_time' in kwargs:
-            self.set_sweep_return_time(kwargs['return_time'], channel)
-        if 'spacing' in kwargs:
-            self.set_sweep_spacing(kwargs['spacing'], channel)
+        if "start" in kwargs:
+            self.set_sweep_start(kwargs["start"], channel)
+        if "stop" in kwargs:
+            self.set_sweep_stop(kwargs["stop"], channel)
+        if "span" in kwargs:
+            self.set_sweep_span(kwargs["span"], channel)
+        if "center" in kwargs:
+            self.set_sweep_center(kwargs["center"], channel)
+        if "sweep_time" in kwargs:
+            self.set_sweep_time(kwargs["sweep_time"], channel)
+        if "hold_time" in kwargs:
+            self.set_sweep_hold_time(kwargs["hold_time"], channel)
+        if "return_time" in kwargs:
+            self.set_sweep_return_time(kwargs["return_time"], channel)
+        if "spacing" in kwargs:
+            self.set_sweep_spacing(kwargs["spacing"], channel)
 
     def set_am_depth(self, depth, channel=1):
-        """ Set depth of amplitude modulation.
+        """Set depth of amplitude modulation.
 
         Parameters
         ----------
@@ -673,7 +710,7 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         val = Q_(depth).magnitude
         if not (0.0 <= val <= 120.0):
             raise Exception("Depth must be between 0.0 and 120.0")
-        self.write('source{}:am:depth {:.1f}pct', channel, val)
+        self.write("source{}:am:depth {:.1f}pct", channel, val)
 
     def set_arb_from_func(self, func, domain, num_pts=10000, copy_to=None):
         """Write arbitrary waveform sampled from a function"""
@@ -682,12 +719,12 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         y = np.fromiter((func(t) for t in ts), dtype=float, count=num_pts)
         self._write_normalized_func(y)
         if copy_to is not None:
-            if copy_to not in (1,2,3,4):
-                raise ValueError('destination must be an int 1-4')
-            self.write('data:copy user{},ememory', copy_to)
+            if copy_to not in (1, 2, 3, 4):
+                raise ValueError("destination must be an int 1-4")
+            self.write("data:copy user{},ememory", copy_to)
 
     def set_arb_func(self, data, interp=None, num_pts=10000, copy_to=None):
-        """ Write arbitrary waveform data to EditMemory.
+        """Write arbitrary waveform data to EditMemory.
 
         Parameters
         ----------
@@ -712,7 +749,7 @@ class AFG_3000(FunctionGenerator, VisaMixin):
         data = np.asanyarray(data)
         if data.ndim != 1:
             raise Exception("`data` must be convertible to a 1-dimensional array")
-        if not ( 2 <= len(data) <= 131072 ):
+        if not (2 <= len(data) <= 131072):
             raise Exception("`data` must contain between 2 and 131072 points")
 
         # Handle interpolation
@@ -720,50 +757,53 @@ class AFG_3000(FunctionGenerator, VisaMixin):
             from scipy.interpolate import interp1d
 
             if not (len(data) <= num_pts <= 131072):
-                raise Exception("`num_pts` must contain between " +
-                                "`len(data)` and 131072 points")
-            x = np.linspace(0, num_pts-1, len(data))
+                raise Exception(
+                    "`num_pts` must contain between " + "`len(data)` and 131072 points"
+                )
+            x = np.linspace(0, num_pts - 1, len(data))
             func = interp1d(x, data, kind=interp)
-            data = func(np.linspace(0, num_pts-1, num_pts))
+            data = func(np.linspace(0, num_pts - 1, num_pts))
 
         self._write_normalized_func(data)
 
         if copy_to is not None:
-            if copy_to not in (1,2,3,4):
-                raise ValueError('destination must be an int 1-4')
-            self.write('data:copy user{},ememory', copy_to)
+            if copy_to not in (1, 2, 3, 4):
+                raise ValueError("destination must be an int 1-4")
+            self.write("data:copy user{},ememory", copy_to)
 
     def _write_normalized_func(self, data):
         # Normalize data to between 0 and 16,382
         min = data.min()
         max = data.max()
-        data = (data-min)*(16382/(max-min))
-        data = data.astype('>u2')  # Convert to big-endian 16-bit unsigned int
+        data = (data - min) * (16382 / (max - min))
+        data = data.astype(">u2")  # Convert to big-endian 16-bit unsigned int
 
         bytestr = data.tostring()
         num = len(bytestr)
         bytestr = "#{}{}".format(len(str(num)), num).encode() + bytestr
         self._rsrc._flush_message_queue()  # before write_raw
-        self._rsrc.write_raw(b'data ememory,' + bytestr)
+        self._rsrc.write_raw(b"data ememory," + bytestr)
 
     def get_ememory(self):
-        """ Get array of data from edit memory.
+        """Get array of data from edit memory.
 
         Returns
         -------
         numpy.array
             Data retrieved from the AFG's edit memory.
         """
-        self.write('data? ememory')
+        self.write("data? ememory")
         self._rsrc._flush_message_queue()  # before read_raw
         resp = self._rsrc.read_raw()
-        if resp[0:1] != b'#':  # Slice for py2/3 compat
+        if resp[0:1] != b"#":  # Slice for py2/3 compat
             raise Exception("Binary reponse missing header! Something's wrong.")
         header_width = int(resp[1:2]) + 2
         num_bytes = int(resp[2:header_width])
-        data = np.frombuffer(resp, dtype='>u2', offset=header_width, count=int(num_bytes/2))
+        data = np.frombuffer(
+            resp, dtype=">u2", offset=header_width, count=int(num_bytes / 2)
+        )
         return data
 
     def trigger(self):
         """Manually force a trigger event"""
-        self.write('trig')
+        self.write("trig")

@@ -27,8 +27,8 @@ from ... import Q_, u
 def _check_visa_support(visa_inst):
     with visa_timeout_context(visa_inst, 100):
         try:
-            if int(visa_inst.query('Z?')) in (0, 1):
-                return 'Newport_1830_C'
+            if int(visa_inst.query("Z?")) in (0, 1):
+                return "Newport_1830_C"
         except:
             pass
     return None
@@ -36,15 +36,16 @@ def _check_visa_support(visa_inst):
 
 def MyFacet(msg, readonly=False, **kwds):
     """Like SCPI_Facet, but without a space before the set-value"""
-    get_msg = msg + '?'
-    set_msg = None if readonly else (msg + '{}')
+    get_msg = msg + "?"
+    set_msg = None if readonly else (msg + "{}")
     return MessageFacet(get_msg, set_msg, convert=int, **kwds)
 
 
 class Newport_1830_C(PowerMeter, VisaMixin):
     """A Newport 1830-C power meter"""
+
     _INST_PRIORITY_ = 8  # IDN isn't supported
-    _INST_PARAMS_ = ['visa_address']
+    _INST_PARAMS_ = ["visa_address"]
 
     # Status byte codes
     _PARAM_ERROR = 1
@@ -62,20 +63,20 @@ class Newport_1830_C(PowerMeter, VisaMixin):
     NO_FILTER = 3
 
     def _initialize(self):
-        self._rsrc.read_termination = '\n'
-        self._rsrc.write_termination = '\n'
+        self._rsrc.read_termination = "\n"
+        self._rsrc.write_termination = "\n"
 
     def close(self):
         self.local_lockout = False
 
-    status_byte = MyFacet('Q', readonly=True)
+    status_byte = MyFacet("Q", readonly=True)
 
-    @deprecated('status_byte')
+    @deprecated("status_byte")
     def get_status_byte(self):
         """Query the status byte register and return it as an int"""
         return self.status_byte
 
-    @Facet(units='W', cached=False)
+    @Facet(units="W", cached=False)
     def power(self):
         """Get the current power measurement
 
@@ -85,21 +86,23 @@ class Newport_1830_C(PowerMeter, VisaMixin):
             Power in units of watts, regardless of the power meter's current
             'units' setting.
         """
-        original_units = self.query('U?')
-        if original_units != '1':
-            self.write('U1')  # Measure in watts
-            power = float(self.query('D?'))
-            self.write('U' + original_units)
+        original_units = self.query("U?")
+        if original_units != "1":
+            self.write("U1")  # Measure in watts
+            power = float(self.query("D?"))
+            self.write("U" + original_units)
         else:
-            power = float(self.query('D?'))
+            power = float(self.query("D?"))
 
-        return Q_(power, 'watts')
+        return Q_(power, "watts")
 
-    @deprecated('power')
+    @deprecated("power")
     def get_power(self):
         return self.power
 
-    range = MyFacet('R', doc="The current input range, [1-8], where 1 is lowest signal.")
+    range = MyFacet(
+        "R", doc="The current input range, [1-8], where 1 is lowest signal."
+    )
 
     def enable_auto_range(self):
         """Enable auto-range"""
@@ -113,7 +116,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         cur_range = self.get_range()
         self.set_range(cur_range)
 
-    @deprecated('range')
+    @deprecated("range")
     def set_range(self, range_num):
         """Set the range for power measurements
 
@@ -128,7 +131,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         """
         self.range = range_num
 
-    @deprecated('range')
+    @deprecated("range")
     def get_range(self):
         """Return the current range setting as an int
 
@@ -144,9 +147,9 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         """
         return self.range
 
-    wavelength = MyFacet('W', units='nm')
+    wavelength = MyFacet("W", units="nm")
 
-    @deprecated('wavelength')
+    @deprecated("wavelength")
     def set_wavelength(self, wavelength):
         """Set the input signal wavelength setting
 
@@ -157,24 +160,26 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         """
         self.wavelength = wavelength
 
-    @deprecated('wavelength')
+    @deprecated("wavelength")
     def get_wavelength(self):
         """Get the input wavelength setting"""
         return self.wavelength
 
-    attenuator = MyFacet('A', value={False:0, True:1}, doc="Whether the attenuator is enabled")
+    attenuator = MyFacet(
+        "A", value={False: 0, True: 1}, doc="Whether the attenuator is enabled"
+    )
 
-    @deprecated('attenuator')
+    @deprecated("attenuator")
     def enable_attenuator(self, enabled=True):
         """Enable the power meter attenuator"""
-        self.write('A{}', int(enabled))
+        self.write("A{}", int(enabled))
 
-    @deprecated('attenuator')
+    @deprecated("attenuator")
     def disable_attenuator(self):
         """Disable the power meter attenuator"""
         self.enable_attenuator(False)
 
-    @deprecated('attenuator')
+    @deprecated("attenuator")
     def attenuator_enabled(self):
         """Whether the attenuator is enabled
 
@@ -183,10 +188,10 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         enabled : bool
             whether the attenuator is enabled
         """
-        val = self.write('A?')
+        val = self.write("A?")
         return bool(val)
 
-    def get_valid_power(self, max_attempts=10, polling_interval=0.1*u.s):
+    def get_valid_power(self, max_attempts=10, polling_interval=0.1 * u.s):
         """Returns a valid power reading
 
         This convience function will try to measure a valid power up to a
@@ -217,7 +222,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
 
         while not is_valid:
             self.disable_hold()
-            time.sleep(polling_interval.to('s').m)
+            time.sleep(polling_interval.to("s").m)
             self.enable_hold()
             i_attempts += 1
 
@@ -240,18 +245,18 @@ class Newport_1830_C(PowerMeter, VisaMixin):
 
         The slow filter uses a 16-measurement running average.
         """
-        self.write('F1')
+        self.write("F1")
 
     def set_medium_filter(self):
         """Set the averaging filter to medium mode
 
         The medium filter uses a 4-measurement running average.
         """
-        self.write('F2')
+        self.write("F2")
 
     def set_no_filter(self):
         """Set the averaging filter to fast mode, i.e. no averaging"""
-        self.write('F3')
+        self.write("F3")
 
     def get_filter(self):
         """Get the current setting for the averaging filter
@@ -266,7 +271,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
 
     def enable_hold(self, enable=True):
         """Enable hold mode"""
-        self.write('G{}', int(not enable))
+        self.write("G{}", int(not enable))
 
     def disable_hold(self):
         """Disable hold mode"""
@@ -280,8 +285,8 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         enabled : bool
             True if in hold mode, False if in run mode
         """
-        val = int(self.query('G?'))
-        return (val == 0)
+        val = int(self.query("G?"))
+        return val == 0
 
     def is_measurement_valid(self):
         """Whether the current measurement is valid
@@ -302,7 +307,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         Sets the current power measurement as the reference power for future dB
         or relative measurements.
         """
-        self.write('S')
+        self.write("S")
 
     def enable_zero(self, enable=True):
         """Enable the zero function
@@ -318,7 +323,7 @@ class Newport_1830_C(PowerMeter, VisaMixin):
 
     def zero_enabled(self):
         """Whether the zero function is enabled"""
-        val = int(self.query('Z?'))  # Need to cast to int first
+        val = int(self.query("Z?"))  # Need to cast to int first
         return bool(val)
 
     def set_units(self, units):
@@ -346,12 +351,12 @@ class Newport_1830_C(PowerMeter, VisaMixin):
             Case-insensitive str indicating which units mode to enter.
         """
         units = units.lower()
-        valid_units = {'watts': 1, 'dbm': 2, 'db': 3, 'rel': 4}
+        valid_units = {"watts": 1, "dbm": 2, "db": 3, "rel": 4}
 
         if units not in valid_units:
             raise Exception("`units` must be one of 'watts', 'dbm', 'db', or 'rel")
 
-        self.write('U{}', valid_units[units])
+        self.write("U{}", valid_units[units])
 
     def get_units(self):
         """Get the units used for displaying power measurements
@@ -361,14 +366,14 @@ class Newport_1830_C(PowerMeter, VisaMixin):
         units : str
             'watts', 'db', 'dbm', or 'rel'
         """
-        val = int(self.query('U?'))
-        units = {1: 'watts', 2: 'db', 3: 'dbm', 4: 'rel'}
+        val = int(self.query("U?"))
+        units = {1: "watts", 2: "db", 3: "dbm", 4: "rel"}
         return units[val]
 
     @property
     def local_lockout(self):
         """Whether local-lockout is enabled"""
-        return bool(self.query('L?'))
+        return bool(self.query("L?"))
 
     @local_lockout.setter
     def local_lockout(self, enable):

@@ -5,14 +5,14 @@ from instrumental.drivers import Instrument, ManualFacet
 
 
 class MyPowerSupply(Instrument):
-    voltage = ManualFacet(units='volts')
-    current = ManualFacet(units='amps')
+    voltage = ManualFacet(units="volts")
+    current = ManualFacet(units="amps")
 
 
 def test():
     ps = MyPowerSupply()
-    ps.voltage = '12V'
-    assert ps.voltage == Q_(12, 'volts')
+    ps.voltage = "12V"
+    assert ps.voltage == Q_(12, "volts")
 
     with pytest.raises(DimensionalityError):
-        ps.voltage = '200 mA'
+        ps.voltage = "200 mA"

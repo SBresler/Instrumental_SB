@@ -12,8 +12,8 @@ class TestNIDAQ(object):
 
     def test_AI_read_array(self, inst):
         ai = inst.ai0
-        data = ai.read(n_samples=10, fsamp='1kHz')
+        data = ai.read(n_samples=10, fsamp="1kHz")
         assert data[ai.path].shape == (10,)
-        assert data['t'].shape == (10,)
+        assert data["t"].shape == (10,)
         assert dim_matches(data[ai.path], u.V)
-        assert dim_matches(data['t'], u.s)
+        assert dim_matches(data["t"], u.s)

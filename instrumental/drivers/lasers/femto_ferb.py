@@ -11,33 +11,34 @@ from . import Laser
 from ..util import visa_timeout_context
 
 _INST_PRIORITY = 6
-_INST_PARAMS = ['visa_address']
+_INST_PARAMS = ["visa_address"]
 
-TRUE = '#t'
-FALSE = '#f'
-bool_dict = {'#t': True, '#f': False}
+TRUE = "#t"
+FALSE = "#f"
+bool_dict = {"#t": True, "#f": False}
 
 
 def _check_visa_support(visa_inst):
     with visa_timeout_context(visa_inst, 50):
         try:
-            visa_inst.query('(param-ref system-type)')
-            return 'FemtoFiber'
+            visa_inst.query("(param-ref system-type)")
+            return "FemtoFiber"
         except:
             pass
     return None
 
 
 class FemtoFiber(Laser):
-    """ A femtoFiber laser.
+    """A femtoFiber laser.
 
     Lasers can only be accessed by their serial port address.
     """
+
     def _initialize(self):
         self.set_control(True)
 
     def is_control_on(self):
-        """ Returns the status of the hardware input control.
+        """Returns the status of the hardware input control.
 
         Hardware input control must be on in order for the laser to be
         controlled by usb connection.
@@ -47,12 +48,12 @@ class FemtoFiber(Laser):
         message : bool
             If True, hardware input conrol is on.
         """
-        message = self._ask('(param-ref hw-input-dis)')
+        message = self._ask("(param-ref hw-input-dis)")
         message = bool_dict[message]
         return message
 
     def set_control(self, control):
-        """ Sets the status of the hardware input control.
+        """Sets the status of the hardware input control.
 
         Hardware input control must be on in order for the laser to be
         controlled by usb connection.
@@ -72,20 +73,21 @@ class FemtoFiber(Laser):
         for key, item in bool_dict.iteritems():
             if item == control:
                 control = key
-        error = self._ask('(param-set! hw-input-dis {})'.format(control),
-                          return_error=True)
+        error = self._ask(
+            "(param-set! hw-input-dis {})".format(control), return_error=True
+        )
         return error
 
     def is_on(self):
         """
         Indicates if the laser is on (True) or off (False).
         """
-        message = self._ask('(param-ref laser:en)')
+        message = self._ask("(param-ref laser:en)")
         message = bool_dict[message]
         return message
 
     def _set_emission(self, control):
-        """ Sets the emission status of the laser.
+        """Sets the emission status of the laser.
 
         Parameters
         ----------
@@ -103,12 +105,11 @@ class FemtoFiber(Laser):
         for key, item in bool_dict.iteritems():
             if item == control:
                 control = key
-        error = self._ask('(param-set! laser:en {})'.format(control),
-                          return_error=True)
+        error = self._ask("(param-set! laser:en {})".format(control), return_error=True)
         return error
 
     def turn_on(self):
-        """ Turns the laser on.
+        """Turns the laser on.
 
         Note that hardware control must be enabled in order for this method
         to execute properly.
@@ -122,7 +123,7 @@ class FemtoFiber(Laser):
         return self._set_emission(True)
 
     def turn_off(self):
-        """  Turns the laser off.
+        """Turns the laser off.
 
         Note that hardware control must be enabled in order for this method
         to execute properly.
@@ -137,10 +138,10 @@ class FemtoFiber(Laser):
 
     def _ask(self, message, return_error=False):
         self._rsrc.ask(message)
-        message = self._rsrc.read(termination='\n')
+        message = self._rsrc.read(termination="\n")
         if return_error:
             error = message
-            if error == '0':
+            if error == "0":
                 error = int(error)
             return error
         return message

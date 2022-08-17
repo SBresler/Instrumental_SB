@@ -10,7 +10,10 @@ from instrumental import u, Q_
 from instrumental.log import get_logger
 from instrumental.drivers import Facet
 from instrumental.drivers import ParamSet
-from instrumental.drivers.motion._madcitylabs.nanodrive_midlib import NiceNanodrive, NiceNanoDriveError
+from instrumental.drivers.motion._madcitylabs.nanodrive_midlib import (
+    NiceNanodrive,
+    NiceNanoDriveError,
+)
 from instrumental.drivers.motion import Motion
 from instrumental.drivers.util import check_units
 
@@ -27,7 +30,7 @@ def list_instruments():
 
     pset = []
     for serial in serials:
-       pset.append(ParamSet(NanoDrive,  serial=serial, units='µm'))
+        pset.append(ParamSet(NanoDrive, serial=serial, units="µm"))
 
     return pset
 
@@ -41,16 +44,16 @@ class NanoDrive(Motion):
     """
     Class controlling motion devices from MadCityLabs using their Nanodrive  library  Madlib.dll
     """
-    _INST_PARAMS_ = ['serial']
+
+    _INST_PARAMS_ = ["serial"]
     axis_indexes = [1, 2, 3]
     axis_range = dict([])
-    _units = ''
+    _units = ""
 
     def _initialize(self):
-        """
-        """
-        self.serial = self._paramset['serial']
-        self._units = self._paramset['units']
+        """ """
+        self.serial = self._paramset["serial"]
+        self._units = self._paramset["units"]
         self._open(self.serial)
 
     def _open(self, serial):
@@ -90,7 +93,9 @@ class NanoDrive(Motion):
 
     def check_axis_error(self, axis_index):
         if axis_index not in self.axis_indexes:
-            raise NanoDriveError(f'The axis index {axis_index} is invalid and should be within {self.axis_indexes}')
+            raise NanoDriveError(
+                f"The axis index {axis_index} is invalid and should be within {self.axis_indexes}"
+            )
 
     def close(self):
         NiceNanodrive.ReleaseAllHandles()
@@ -109,8 +114,8 @@ class NanoDrive(Motion):
         self.check_axis_error(axis_index)
         return Q_(self._actuator.SingleReadN(axis_index), self._units)
 
-    @check_units(target_position='µm')
-    def move(self, axis_index=1, target_position=Q_('0µm')):
+    @check_units(target_position="µm")
+    def move(self, axis_index=1, target_position=Q_("0µm")):
         """
         Move the given axis to the desired position. The target position is scaled in µm before sent to the controller
         Parameters
@@ -122,21 +127,19 @@ class NanoDrive(Motion):
         self._actuator.SingleWriteN(target_position.m_as(self._units), axis_index)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from instrumental import instrument
+
     paramsets = list_instruments()
     device = NanoDrive(paramsets[0])
 
-    print(f'The position of axis X is {device.check_position(1)}')
-    print(f'The position of axis Y is {device.check_position(2)}')
+    print(f"The position of axis X is {device.check_position(1)}")
+    print(f"The position of axis Y is {device.check_position(2)}")
 
-    device.move(1, Q_('12.5µm'))
-    device.move(2, Q_(28000, 'nm'))
+    device.move(1, Q_("12.5µm"))
+    device.move(2, Q_(28000, "nm"))
 
-    print(f'The position of axis X is {device.check_position(1)}')
-    print(f'The position of axis Y is {device.check_position(2)}')
+    print(f"The position of axis X is {device.check_position(1)}")
+    print(f"The position of axis Y is {device.check_position(2)}")
 
     device.close()
-
-
-
